@@ -1,10 +1,10 @@
 package controllers
 
 import (
-	"GarageSaleAPI/application/services"
-	"GarageSaleAPI/interfaces"
-	"GarageSaleAPI/interfaces/dto"
-	"GarageSaleAPI/interfaces/responses"
+	"GarageSaleAPI/app/application/services"
+	"GarageSaleAPI/app/interfaces"
+	"GarageSaleAPI/app/interfaces/dto"
+	"GarageSaleAPI/app/interfaces/responses"
 	"encoding/json"
 	"log/slog"
 	"net/http"

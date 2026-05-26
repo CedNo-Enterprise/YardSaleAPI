@@ -1,7 +1,7 @@
 package responses
 
 import (
-	"GarageSaleAPI/domain/user"
+	"GarageSaleAPI/app/domain/user"
 	"time"
 )
 

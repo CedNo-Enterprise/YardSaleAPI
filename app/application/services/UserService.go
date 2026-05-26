@@ -1,15 +1,25 @@
 package services
 
 import (
-	"GarageSaleAPI/domain/user"
-	"GarageSaleAPI/infrastructure/persistence/memory"
-	"GarageSaleAPI/interfaces/dto"
+	"GarageSaleAPI/app/domain/user"
+	"GarageSaleAPI/app/infrastructure/persistence/memory"
+	"GarageSaleAPI/app/interfaces/dto"
 	"errors"
 	"log/slog"
 	"net/http"
 	"net/mail"
 	"time"
 )
+
+type UserService struct {
+	userRepository user.UserRepository
+}
+
+var service = UserService{
+	userRepository: memory.InMemoryUserRepository{
+		UserList: make([]user.User, 0),
+	},
+}
 
 func AddUser(userDTO dto.UserDTO) (error, int) {
 	email, err := mail.ParseAddress(userDTO.Email)
@@ -19,13 +29,13 @@ func AddUser(userDTO dto.UserDTO) (error, int) {
 	}
 
 	newUser := user.CreateUser(userDTO.Id, userDTO.Username, userDTO.Password, *email, time.Now())
-	memory.AddUser(newUser)
+	service.userRepository.AddUser(newUser)
 
 	return nil, http.StatusCreated
 }
 
 func GetUserByUsername(username string) (*user.User, error) {
-	u, err := memory.GetUserById(username)
+	u, err := service.userRepository.GetUserByUsername(username)
 	if err != nil {
 		return nil, err
 	}
