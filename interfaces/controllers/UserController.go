@@ -1,10 +1,10 @@
 package controllers
 
 import (
-	"GarageSaleAPI/app/application/services"
-	"GarageSaleAPI/app/interfaces"
-	"GarageSaleAPI/app/interfaces/dto"
-	"GarageSaleAPI/app/interfaces/responses"
+	"GarageSaleAPI/application/services"
+	"GarageSaleAPI/interfaces"
+	"GarageSaleAPI/interfaces/dto"
+	"GarageSaleAPI/interfaces/responses"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -16,7 +16,7 @@ func AddUserHandlersToMux(mux *http.ServeMux) {
 }
 
 func addUser(w http.ResponseWriter, r *http.Request) {
-	interfaces.CheckContentType(w, r, "application/json")
+	interfaces.ValidateContentType(w, r, "application/json")
 
 	requestBody := http.MaxBytesReader(w, r.Body, 1048576)
 
@@ -26,14 +26,14 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 	var userDTO dto.UserDTO
 	interfaces.Decode(w, decoder, &userDTO)
 
-	httpError, code := services.AddUser(userDTO)
-	if httpError != nil {
-		slog.Error("Error adding user", "err", httpError.Error())
-		http.Error(w, httpError.Error(), code)
+	err := services.AddUser(userDTO)
+	if err != nil {
+		slog.Error("Error adding user", "err", err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	w.WriteHeader(code)
+	w.WriteHeader(http.StatusCreated)
 }
 
 func getUser(w http.ResponseWriter, r *http.Request) {

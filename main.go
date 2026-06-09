@@ -1,7 +1,7 @@
 package main
 
 import (
-	"GarageSaleAPI/app/interfaces/controllers"
+	"GarageSaleAPI/interfaces/controllers"
 	"net/http"
 )
 
