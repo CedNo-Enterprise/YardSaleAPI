@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var userRepository = new(memory.InMemoryUserRepository)
+var UserRepository = new(memory.InMemoryUserRepository)
 
 func AddUser(userDTO dto.UserDTO) error {
 	email, err := mail.ParseAddress(userDTO.Email)
@@ -20,7 +20,7 @@ func AddUser(userDTO dto.UserDTO) error {
 	}
 
 	newUser := user.CreateUser(userDTO.Id, userDTO.Username, userDTO.Password, *email, time.Now())
-	err = userRepository.AddUser(newUser)
+	err = UserRepository.AddUser(newUser)
 	if err != nil {
 		slog.Error(err.Error())
 		return err
@@ -30,7 +30,7 @@ func AddUser(userDTO dto.UserDTO) error {
 }
 
 func GetUserByUsername(username string) (*user.User, error) {
-	u, err := userRepository.GetUserByUsername(username)
+	u, err := UserRepository.GetUserByUsername(username)
 	if err != nil {
 		return nil, err
 	}

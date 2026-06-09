@@ -2,6 +2,7 @@ package services
 
 import (
 	"GarageSaleAPI/domain/user"
+	"GarageSaleAPI/infrastructure/persistence/memory"
 	"GarageSaleAPI/interfaces/dto"
 	"testing"
 )
@@ -44,6 +45,10 @@ func TestAddUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				UserRepository = new(memory.InMemoryUserRepository)
+			})
+
 			if err := AddUser(tt.args.userDTO); (err != nil) != tt.wantErr ||
 				((err != nil) && err.Error() != tt.textErr) {
 				t.Errorf(
@@ -88,6 +93,10 @@ func TestGetUserByUsername(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				UserRepository = new(memory.InMemoryUserRepository)
+			})
+
 			e := AddUser(uDTO)
 			if e != nil && !tt.wantErr {
 				t.Errorf("AddUser() error = %v, wantErr %v", e, tt.wantErr)

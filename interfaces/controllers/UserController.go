@@ -28,7 +28,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 
 	err := services.AddUser(userDTO)
 	if err != nil {
-		slog.Error("Error adding user", "err", err.Error())
+		slog.Error("error adding user", "err", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -42,7 +42,7 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 	u, err := services.GetUserByUsername(username)
 	if err != nil {
 		slog.Error("Error getting user by username", "username", username, "err", err)
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "user not found", http.StatusNotFound)
 		return
 	}
 
