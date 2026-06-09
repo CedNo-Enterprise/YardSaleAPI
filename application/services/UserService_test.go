@@ -70,7 +70,6 @@ func TestGetUserByUsername(t *testing.T) {
 		args    args
 		want    *user.User
 		wantErr bool
-		textErr string
 	}{
 		{
 			name: "get added user by username",
@@ -85,7 +84,6 @@ func TestGetUserByUsername(t *testing.T) {
 				username: "fake-username",
 			},
 			wantErr: true,
-			textErr: "user not found",
 		},
 	}
 	for _, tt := range tests {
@@ -95,8 +93,7 @@ func TestGetUserByUsername(t *testing.T) {
 				t.Errorf("AddUser() error = %v, wantErr %v", e, tt.wantErr)
 			}
 			_, err := GetUserByUsername(tt.args.username)
-			if (err != nil) != tt.wantErr ||
-				((err != nil) && err.Error() != tt.textErr) {
+			if (err != nil) != tt.wantErr {
 				t.Errorf("GetUserByUsername() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}

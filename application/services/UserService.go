@@ -20,7 +20,11 @@ func AddUser(userDTO dto.UserDTO) error {
 	}
 
 	newUser := user.CreateUser(userDTO.Id, userDTO.Username, userDTO.Password, *email, time.Now())
-	userRepository.AddUser(newUser)
+	err = userRepository.AddUser(newUser)
+	if err != nil {
+		slog.Error(err.Error())
+		return err
+	}
 
 	return nil
 }
