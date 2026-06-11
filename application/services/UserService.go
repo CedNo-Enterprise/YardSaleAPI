@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var UserRepository = new(memory.InMemoryUserRepository)
+var UserRepository user.UserRepository = new(memory.InMemoryUserRepository)
 
 func validateUsername(username string) error {
 	if username == "" {
