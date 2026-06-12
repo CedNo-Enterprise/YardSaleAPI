@@ -1,8 +1,8 @@
 package controllers
 
 import (
+	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
-	"GarageSaleAPI/infrastructure/persistence/memory"
 	"GarageSaleAPI/interfaces/dto"
 	"bytes"
 	"fmt"
@@ -28,6 +28,9 @@ func Test_addUser(t *testing.T) {
 		w *httptest.ResponseRecorder
 		r *http.Request
 	}
+
+	s := server.NewAppServer()
+	controller := *NewUserController(services.NewUserService(*s.GetUserRepository()))
 
 	tests := []struct {
 		name       string
@@ -90,10 +93,10 @@ func Test_addUser(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				services.UserRepository = new(memory.InMemoryUserRepository)
+				s = server.NewAppServer()
 			})
 
-			addUser(tt.args.w, tt.args.r)
+			controller.addUser(tt.args.w, tt.args.r)
 			if tt.args.w.Code != tt.wantStatus {
 				t.Errorf("addUser() got status code = %v, want = %v",
 					tt.args.w.Code, tt.wantStatus)
@@ -121,6 +124,9 @@ func Test_getUser(t *testing.T) {
 		r *http.Request
 	}
 
+	s := server.NewAppServer()
+	service := services.NewUserService(*s.GetUserRepository())
+	controller := *NewUserController(service)
 	creationTime := time.Now()
 
 	userToAdd := dto.UserDTO{
@@ -128,7 +134,7 @@ func Test_getUser(t *testing.T) {
 		Password: "MDP!@#111111111",
 		Email:    "email@email.com",
 	}
-	e := services.AddUser(userToAdd)
+	e := service.AddUser(userToAdd)
 	if e != nil {
 		t.Fatal(e.Error())
 	}
@@ -161,10 +167,10 @@ func Test_getUser(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				services.UserRepository = new(memory.InMemoryUserRepository)
+				s = server.NewAppServer()
 			})
 
-			getUser(tt.args.w, tt.args.r)
+			controller.getUser(tt.args.w, tt.args.r)
 			if tt.wantStatusCode != tt.args.w.Code {
 				t.Errorf("getUser() got status code = %v, want = %v", tt.args.w.Code, tt.wantStatusCode)
 			}

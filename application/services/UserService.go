@@ -2,7 +2,6 @@ package services
 
 import (
 	"GarageSaleAPI/domain/user"
-	"GarageSaleAPI/infrastructure/persistence/memory"
 	"GarageSaleAPI/interfaces/dto"
 	"errors"
 	"log/slog"
@@ -11,7 +10,13 @@ import (
 	"time"
 )
 
-var UserRepository user.UserRepository = new(memory.InMemoryUserRepository)
+type UserService struct {
+	userRepository user.UserRepository
+}
+
+func NewUserService(userRepository user.UserRepository) *UserService {
+	return &UserService{userRepository: userRepository}
+}
 
 func validateUsername(username string) error {
 	if username == "" {
@@ -60,7 +65,7 @@ func parseEmail(email string) (*mail.Address, error) {
 	return address, nil
 }
 
-func AddUser(userDTO dto.UserDTO) error {
+func (service *UserService) AddUser(userDTO dto.UserDTO) error {
 	userError := validateUser(userDTO)
 	if userError != nil {
 		return userError
@@ -73,7 +78,7 @@ func AddUser(userDTO dto.UserDTO) error {
 	}
 
 	newUser := user.CreateUser(userDTO.Username, userDTO.Password, *email, time.Now())
-	err = UserRepository.AddUser(newUser)
+	err = service.userRepository.AddUser(newUser)
 	if err != nil {
 		slog.Error(err.Error())
 		return err
@@ -82,8 +87,8 @@ func AddUser(userDTO dto.UserDTO) error {
 	return nil
 }
 
-func GetUserByUsername(username string) (*user.User, error) {
-	u, err := UserRepository.GetUserByUsername(username)
+func (service *UserService) GetUserByUsername(username string) (*user.User, error) {
+	u, err := service.userRepository.GetUserByUsername(username)
 	if err != nil {
 		return nil, err
 	}
