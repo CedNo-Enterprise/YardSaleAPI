@@ -10,12 +10,20 @@ import (
 	"net/http"
 )
 
-func AddUserHandlersToMux(mux *http.ServeMux) {
-	mux.HandleFunc("POST /user/add", addUser)
-	mux.HandleFunc("GET /user/{username}", getUser)
+type UserController struct {
+	userService *services.UserService
 }
 
-func addUser(w http.ResponseWriter, r *http.Request) {
+func NewUserController(userService *services.UserService) *UserController {
+	return &UserController{userService}
+}
+
+func (controller *UserController) AddUserHandlersToMux(mux *http.ServeMux) {
+	mux.HandleFunc("POST /user/add", controller.addUser)
+	mux.HandleFunc("GET /user/{username}", controller.getUser)
+}
+
+func (controller *UserController) addUser(w http.ResponseWriter, r *http.Request) {
 	interfaces.ValidateContentType(w, r, "application/json")
 
 	requestBody := http.MaxBytesReader(w, r.Body, 1048576)
@@ -26,7 +34,7 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 	var userDTO dto.UserDTO
 	interfaces.Decode(w, decoder, &userDTO)
 
-	err := services.AddUser(userDTO)
+	err := controller.userService.AddUser(userDTO)
 	if err != nil {
 		slog.Error("error adding user", "err", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -36,10 +44,10 @@ func addUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func getUser(w http.ResponseWriter, r *http.Request) {
+func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request) {
 	username := r.PathValue("username")
 
-	u, err := services.GetUserByUsername(username)
+	u, err := controller.userService.GetUserByUsername(username)
 	if err != nil {
 		slog.Error("Error getting user by username", "username", username, "err", err)
 		http.Error(w, "user not found", http.StatusNotFound)
