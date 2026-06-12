@@ -1,15 +1,17 @@
 package services
 
 import (
+	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/domain/user"
-	"GarageSaleAPI/infrastructure/persistence/memory"
 	"GarageSaleAPI/interfaces/dto"
 	"testing"
 )
 
 func TestAddUser(t *testing.T) {
+	s := server.NewAppServer()
 	type args struct {
-		userDTO dto.UserDTO
+		userService *UserService
+		userDTO     dto.UserDTO
 	}
 	tests := []struct {
 		name    string
@@ -20,6 +22,7 @@ func TestAddUser(t *testing.T) {
 		{
 			name: "add valid user",
 			args: args{
+				userService: NewUserService(*s.GetUserRepository()),
 				userDTO: dto.UserDTO{
 					Username: "username",
 					Password: "password1111111",
@@ -31,6 +34,7 @@ func TestAddUser(t *testing.T) {
 		{
 			name: "add user with invalid email",
 			args: args{
+				userService: NewUserService(*s.GetUserRepository()),
 				userDTO: dto.UserDTO{
 					Username: "username",
 					Password: "password1111111",
@@ -44,10 +48,10 @@ func TestAddUser(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				UserRepository = new(memory.InMemoryUserRepository)
+				s = server.NewAppServer()
 			})
 
-			if err := AddUser(tt.args.userDTO); (err != nil) != tt.wantErr ||
+			if err := tt.args.userService.AddUser(tt.args.userDTO); (err != nil) != tt.wantErr ||
 				((err != nil) && err.Error() != tt.textErr) {
 				t.Errorf(
 					"AddUser()\nerror = %v, wantErr %v\ntext = %v, textErr = %v",
@@ -58,6 +62,7 @@ func TestAddUser(t *testing.T) {
 }
 
 func TestGetUserByUsername(t *testing.T) {
+	s := server.NewAppServer()
 	uDTO := dto.UserDTO{
 		Username: "username",
 		Password: "password1111111",
@@ -65,7 +70,8 @@ func TestGetUserByUsername(t *testing.T) {
 	}
 
 	type args struct {
-		username string
+		userService *UserService
+		username    string
 	}
 	tests := []struct {
 		name    string
@@ -76,14 +82,16 @@ func TestGetUserByUsername(t *testing.T) {
 		{
 			name: "get added user by username",
 			args: args{
-				username: "username",
+				userService: NewUserService(*s.GetUserRepository()),
+				username:    "username",
 			},
 			wantErr: false,
 		},
 		{
 			name: "get non-added user by username",
 			args: args{
-				username: "fake-username",
+				userService: NewUserService(*s.GetUserRepository()),
+				username:    "fake-username",
 			},
 			wantErr: true,
 		},
@@ -91,14 +99,14 @@ func TestGetUserByUsername(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				UserRepository = new(memory.InMemoryUserRepository)
+				s = server.NewAppServer()
 			})
 
-			e := AddUser(uDTO)
+			e := tt.args.userService.AddUser(uDTO)
 			if e != nil && !tt.wantErr {
 				t.Errorf("AddUser() error = %v, wantErr %v", e, tt.wantErr)
 			}
-			_, err := GetUserByUsername(tt.args.username)
+			_, err := tt.args.userService.GetUserByUsername(tt.args.username)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetUserByUsername() error = %v, wantErr %v", err, tt.wantErr)
 				return
