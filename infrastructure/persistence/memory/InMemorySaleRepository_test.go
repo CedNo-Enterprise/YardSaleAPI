@@ -52,7 +52,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &InMemorySaleRepository{
-				SaleList: tt.fields.SaleList,
+				saleList: tt.fields.SaleList,
 			}
 
 			err := repo.AddSale(tt.args.sale)
@@ -135,7 +135,7 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &InMemorySaleRepository{
-				SaleList: tt.fields.SaleList,
+				saleList: tt.fields.SaleList,
 			}
 
 			got, err := repo.GetSaleById(tt.args.id)
