@@ -6,7 +6,7 @@ import (
 )
 
 type InMemorySaleRepository struct {
-	SaleList []sale.Sale
+	saleList []sale.Sale
 }
 
 func (repo *InMemorySaleRepository) AddSale(sale sale.Sale) error {
@@ -15,12 +15,12 @@ func (repo *InMemorySaleRepository) AddSale(sale sale.Sale) error {
 		return errors.New("sale already exists")
 	}
 
-	repo.SaleList = append(repo.SaleList, sale)
+	repo.saleList = append(repo.saleList, sale)
 	return nil
 }
 
 func (repo *InMemorySaleRepository) GetSaleById(id string) (*sale.Sale, error) {
-	for _, value := range repo.SaleList {
+	for _, value := range repo.saleList {
 		if value.Id() == id {
 			return &value, nil
 		}
