@@ -24,4 +24,8 @@ func initAppState(mux *http.ServeMux) {
 	userService := services.NewUserService(*s.GetUserRepository())
 	userController := controllers.NewUserController(userService)
 	userController.AddUserHandlersToMux(mux)
+
+	saleService := services.NewSaleService(*s.GetSaleRepository())
+	saleController := controllers.NewSaleController(saleService)
+	saleController.AddSalesHandlersToMux(mux)
 }

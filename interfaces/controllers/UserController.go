@@ -19,7 +19,7 @@ func NewUserController(userService *services.UserService) *UserController {
 }
 
 func (controller *UserController) AddUserHandlersToMux(mux *http.ServeMux) {
-	mux.HandleFunc("POST /user/add", controller.addUser)
+	mux.HandleFunc("POST /user", controller.addUser)
 	mux.HandleFunc("GET /user/{username}", controller.getUser)
 }
 
@@ -57,7 +57,6 @@ func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request
 	response := responses.NewUserResponse(u)
 
 	interfaces.Marshal(w, response)
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	interfaces.Encode(w, response)

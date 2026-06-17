@@ -47,21 +47,21 @@ func validateSale(saleDTO dto.SaleDTO) error {
 	return nil
 }
 
-func (service *SaleService) AddSale(saleDTO dto.SaleDTO) error {
+func (service *SaleService) AddSale(saleDTO dto.SaleDTO) (*string, error) {
 	if validateSale(saleDTO) != nil {
-		return errors.New("invalid sale")
+		return nil, errors.New("invalid sale")
 	}
 
 	saleId := uuid.NewString()
-	sale := sale.CreateSale(saleId, saleDTO.Name, saleDTO.Address)
+	s := sale.CreateSale(saleId, saleDTO.Name, saleDTO.Address)
 
-	err := service.saleRepository.AddSale(sale)
+	err := service.saleRepository.AddSale(s)
 	if err != nil {
 		slog.Error(err.Error())
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &saleId, nil
 }
 
 func (service *SaleService) GetSaleById(saleId string) (*sale.Sale, error) {
