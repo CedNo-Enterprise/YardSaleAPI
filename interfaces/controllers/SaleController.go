@@ -3,7 +3,7 @@ package controllers
 import (
 	"GarageSaleAPI/application/services"
 	"GarageSaleAPI/interfaces"
-	"GarageSaleAPI/interfaces/dto"
+	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/interfaces/responses"
 	"encoding/json"
 	"log/slog"
@@ -31,7 +31,7 @@ func (controller *SaleController) addSale(w http.ResponseWriter, r *http.Request
 	decoder := json.NewDecoder(requestBody)
 	decoder.DisallowUnknownFields()
 
-	var saleDTO dto.SaleDTO
+	var saleDTO requests.SaleRequest
 	interfaces.Decode(w, decoder, &saleDTO)
 
 	saleId, err := controller.saleService.AddSale(saleDTO)

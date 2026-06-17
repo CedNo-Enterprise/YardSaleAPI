@@ -3,7 +3,7 @@ package controllers
 import (
 	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
-	"GarageSaleAPI/interfaces/dto"
+	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/test"
 	"bytes"
 	"net/http"
@@ -86,7 +86,7 @@ func TestSaleController_getSale(t *testing.T) {
 	service := services.NewSaleService(*s.GetSaleRepository())
 	controller := *NewSaleController(service)
 
-	saleToAdd := dto.SaleDTO{
+	saleToAdd := requests.SaleRequest{
 		Name:    "New Sale on the Block!",
 		Address: "123 st road",
 	}

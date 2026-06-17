@@ -1,14 +1,13 @@
 package user
 
 import (
-	"net/mail"
 	"time"
 )
 
 type User struct {
 	Username  string
 	Password  string
-	Email     mail.Address
+	Email     string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

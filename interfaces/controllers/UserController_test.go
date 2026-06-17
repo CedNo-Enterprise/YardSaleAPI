@@ -3,7 +3,7 @@ package controllers
 import (
 	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
-	"GarageSaleAPI/interfaces/dto"
+	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/test"
 	"bytes"
 	"fmt"
@@ -106,7 +106,7 @@ func Test_getUser(t *testing.T) {
 	controller := *NewUserController(service)
 	creationTime := time.Now()
 
-	userToAdd := dto.UserDTO{
+	userToAdd := requests.UserRequest{
 		Username: "Edgouille",
 		Password: "MDP!@#111111111",
 		Email:    "email@email.com",

@@ -2,7 +2,6 @@ package memory
 
 import (
 	"GarageSaleAPI/domain/user"
-	"net/mail"
 	"reflect"
 	"testing"
 	"time"
@@ -16,11 +15,10 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 		user user.User
 	}
 
-	email, _ := mail.ParseAddress("email@email.com")
 	validUser := user.User{
 		Username:  "username",
 		Password:  "password",
-		Email:     *email,
+		Email:     "email@email.com",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -79,11 +77,10 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 		username string
 	}
 
-	email, _ := mail.ParseAddress("email@email.com")
 	validUser := user.User{
 		Username:  "username",
 		Password:  "password",
-		Email:     *email,
+		Email:     "email@email.com",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

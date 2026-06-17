@@ -2,10 +2,11 @@ package services
 
 import (
 	"GarageSaleAPI/domain/sale"
-	"GarageSaleAPI/interfaces/dto"
+	"GarageSaleAPI/interfaces/requests"
 	"errors"
 	"log/slog"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -17,45 +18,26 @@ func NewSaleService(saleRepository sale.SaleRepository) *SaleService {
 	return &SaleService{saleRepository: saleRepository}
 }
 
-func validateSaleName(saleName string) error {
-	if saleName == "" {
-		return errors.New("sale name is empty")
-	} else if len(saleName) < 8 {
-		return errors.New("sale name is too short")
-	} else if len(saleName) > 64 {
-		return errors.New("sale name is too long")
-	}
-	return nil
-}
-
-func validateSaleAddress(saleAddress string) error {
-	if saleAddress == "" {
-		return errors.New("sale address is empty")
-	}
-	return nil
-}
-
-func validateSale(saleDTO dto.SaleDTO) error {
-	if validateSaleName(saleDTO.Name) != nil {
-		return errors.New("sale name is invalid")
-	}
-
-	if validateSaleAddress(saleDTO.Address) != nil {
-		return errors.New("sale address is invalid")
+func validateSale(saleDTO requests.SaleRequest) error {
+	validate := validator.New()
+	err := validate.Struct(saleDTO)
+	if err != nil {
+		return errors.New("invalid sale")
 	}
 
 	return nil
 }
 
-func (service *SaleService) AddSale(saleDTO dto.SaleDTO) (*string, error) {
-	if validateSale(saleDTO) != nil {
-		return nil, errors.New("invalid sale")
+func (service *SaleService) AddSale(saleDTO requests.SaleRequest) (*string, error) {
+	err := validateSale(saleDTO)
+	if err != nil {
+		return nil, err
 	}
 
 	saleId := uuid.NewString()
 	s := sale.CreateSale(saleId, saleDTO.Name, saleDTO.Address)
 
-	err := service.saleRepository.AddSale(s)
+	err = service.saleRepository.AddSale(s)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, err
