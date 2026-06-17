@@ -53,7 +53,7 @@ func TestSaleService_AddSale(t *testing.T) {
 				s = server.NewAppServer()
 			})
 
-			if err := tt.args.service.AddSale(tt.args.saleDTO); (err != nil) != tt.wantErr ||
+			if _, err := tt.args.service.AddSale(tt.args.saleDTO); (err != nil) != tt.wantErr ||
 				(err != nil) && err.Error() != tt.wantErrText {
 				t.Errorf("AddSale() error = %v, wantErr %v", err, tt.wantErr)
 			}

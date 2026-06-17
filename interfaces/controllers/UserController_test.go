@@ -4,24 +4,14 @@ import (
 	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
 	"GarageSaleAPI/interfaces/dto"
+	"GarageSaleAPI/test"
 	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 )
-
-func createAddUserRequest(method string, target string, body io.Reader, contentType string) *http.Request {
-	request := httptest.NewRequest(
-		method,
-		target,
-		body,
-	)
-	request.Header.Set("Content-Type", contentType)
-	return request
-}
 
 func Test_addUser(t *testing.T) {
 	type args struct {
@@ -41,7 +31,7 @@ func Test_addUser(t *testing.T) {
 			name: "Add valid user",
 			args: args{
 				w: httptest.NewRecorder(),
-				r: createAddUserRequest(
+				r: test.CreateRequest(
 					http.MethodPost,
 					"/user/add",
 					bytes.NewBufferString(`{
@@ -58,7 +48,7 @@ func Test_addUser(t *testing.T) {
 			name: "Add user with invalid content-type",
 			args: args{
 				w: httptest.NewRecorder(),
-				r: createAddUserRequest(
+				r: test.CreateRequest(
 					http.MethodPost,
 					"/user/add",
 					bytes.NewBufferString(`{
@@ -75,7 +65,7 @@ func Test_addUser(t *testing.T) {
 			name: "Add invalid user",
 			args: args{
 				w: httptest.NewRecorder(),
-				r: createAddUserRequest(
+				r: test.CreateRequest(
 					http.MethodPost,
 					"/user/add",
 					bytes.NewBufferString(`{
@@ -103,19 +93,6 @@ func Test_addUser(t *testing.T) {
 			}
 		})
 	}
-}
-
-func createGetUserRequest(
-	method string, target string, body io.Reader,
-	pathParam string, pathParamValue string,
-) *http.Request {
-	request := httptest.NewRequest(method, target, body)
-
-	if pathParam != "" || pathParamValue != "" {
-		request.SetPathValue(pathParam, pathParamValue)
-	}
-
-	return request
 }
 
 func Test_getUser(t *testing.T) {
@@ -149,7 +126,7 @@ func Test_getUser(t *testing.T) {
 			name: "Get user",
 			args: args{
 				w: httptest.NewRecorder(),
-				r: createGetUserRequest(http.MethodGet, "/user/", nil, "username", "Edgouille"),
+				r: test.CreateRequestWithPathParam(http.MethodGet, "/user/", nil, "username", "Edgouille"),
 			},
 			wantStatusCode: http.StatusOK,
 			wantBody:       fmt.Sprintf(`{"username":"Edgouille","email":"email@email.com","created_at":"%v","updated_at":"%v"}`+"\n", creationTime.Format(time.RFC3339Nano), creationTime.Format(time.RFC3339Nano)),

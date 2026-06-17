@@ -9,3 +9,11 @@ type Sale struct {
 func (s *Sale) Id() string {
 	return s.id
 }
+
+func (s *Sale) Name() string {
+	return s.name
+}
+
+func (s *Sale) Address() string {
+	return s.address
+}
