@@ -10,7 +10,7 @@ type InMemoryUserRepository struct {
 }
 
 func (repo *InMemoryUserRepository) AddUser(user user.User) error {
-	duplicate, _ := repo.GetUserByUsername(user.Username)
+	duplicate, _ := repo.GetUserByUsername(user.Username())
 	if duplicate != nil {
 		return errors.New("user already exists")
 	}
@@ -21,7 +21,7 @@ func (repo *InMemoryUserRepository) AddUser(user user.User) error {
 
 func (repo *InMemoryUserRepository) GetUserByUsername(username string) (*user.User, error) {
 	for _, foundUser := range repo.UserList {
-		if foundUser.Username == username {
+		if foundUser.Username() == username {
 			return &foundUser, nil
 		}
 	}
