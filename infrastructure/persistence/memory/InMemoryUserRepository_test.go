@@ -15,13 +15,7 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 		user user.User
 	}
 
-	validUser := user.User{
-		Username:  "username",
-		Password:  "password",
-		Email:     "email@email.com",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
+	validUser := user.CreateUser("username", "password", "email@email.com", time.Now())
 
 	tests := []struct {
 		name    string
@@ -77,13 +71,7 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 		username string
 	}
 
-	validUser := user.User{
-		Username:  "username",
-		Password:  "password",
-		Email:     "email@email.com",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
+	validUser := user.CreateUser("username", "password", "email@email.com", time.Now())
 
 	tests := []struct {
 		name    string

@@ -14,9 +14,9 @@ type UserResponse struct {
 
 func NewUserResponse(u *user.User) UserResponse {
 	return UserResponse{
-		Username:  u.Username,
-		Email:     u.Email,
-		CreatedAt: u.CreatedAt,
-		UpdatedAt: u.UpdatedAt,
+		Username:  u.Username(),
+		Email:     u.Email(),
+		CreatedAt: u.CreatedAt(),
+		UpdatedAt: u.UpdatedAt(),
 	}
 }
