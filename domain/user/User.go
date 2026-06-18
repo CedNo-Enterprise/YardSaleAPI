@@ -12,16 +12,6 @@ type User struct {
 	updatedAt time.Time
 }
 
-func NewUser(username string, password string, email string, createdAt time.Time, updatedAt time.Time) *User {
-	return &User{
-		username:  username,
-		password:  password,
-		email:     email,
-		createdAt: createdAt,
-		updatedAt: updatedAt,
-	}
-}
-
 func (u User) Username() string {
 	return u.username
 }
