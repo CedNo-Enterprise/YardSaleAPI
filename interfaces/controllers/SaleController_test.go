@@ -87,8 +87,15 @@ func TestSaleController_getSale(t *testing.T) {
 	controller := *NewSaleController(service)
 
 	saleToAdd := requests.SaleRequest{
-		Name:    "New Sale on the Block!",
-		Address: "123 st road",
+		Name: "New Sale on the Block!",
+		Address: requests.AddressRequest{
+			Line1:      "northern",
+			Line2:      "",
+			City:       "Washington",
+			State:      "WS",
+			PostalCode: "U1A 2C5",
+			Country:    "US",
+		},
 	}
 	_, err := service.AddSale(saleToAdd)
 	if err != nil {

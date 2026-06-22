@@ -3,13 +3,13 @@ package responses
 import "GarageSaleAPI/domain/sale"
 
 type SaleResponse struct {
-	Name    string `json:"name"`
-	Address string `json:"address"`
+	Name    string          `json:"name"`
+	Address AddressResponse `json:"address"`
 }
 
 func NewSaleResponse(sale sale.Sale) *SaleResponse {
 	return &SaleResponse{
 		sale.Name(),
-		sale.Address(),
+		*NewAddressResponse(sale.Address()),
 	}
 }

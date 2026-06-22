@@ -1,9 +1,16 @@
 package memory
 
 import (
+	"GarageSaleAPI/domain/address"
 	"GarageSaleAPI/domain/sale"
 	"reflect"
 	"testing"
+	"time"
+)
+
+var validAddress = address.CreateAddress(
+	"123e4567-e89b-12d3-a456-426614174111", "northern", nil,
+	"Washington", "WS", "U1A 2C5", "US", time.Now(),
 )
 
 func TestInMemorySaleRepository_AddSale(t *testing.T) {
@@ -17,7 +24,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 	validSale := sale.CreateSale(
 		"123e4567-e89b-12d3-a456-426614174000",
 		"Sale",
-		"",
+		validAddress,
 	)
 
 	tests := []struct {
@@ -78,7 +85,7 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 	validSale := sale.CreateSale(
 		validId,
 		"Sale",
-		"",
+		validAddress,
 	)
 
 	tests := []struct {
@@ -107,7 +114,7 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 					sale.CreateSale(
 						"123e4567-e89b-12d3-a456-426614485967",
 						"diff sale",
-						"1234 create st",
+						validAddress,
 					),
 				},
 			},

@@ -1,6 +1,6 @@
 package requests
 
 type SaleRequest struct {
-	Name    string `validate:"required,max=64"`
-	Address string `validate:"required"`
+	Name    string         `json:"name"       validate:"required,max=64"`
+	Address AddressRequest `json:"address"    validate:"required"`
 }

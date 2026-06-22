@@ -1,6 +1,8 @@
 package sale
 
-func CreateSale(id string, name string, address string) Sale {
+import "GarageSaleAPI/domain/address"
+
+func CreateSale(id string, name string, address address.Address) Sale {
 	return Sale{
 		id:      id,
 		name:    name,

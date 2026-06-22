@@ -1,9 +1,11 @@
 package sale
 
+import "GarageSaleAPI/domain/address"
+
 type Sale struct {
 	id      string
 	name    string
-	address string
+	address address.Address
 }
 
 func (s *Sale) Id() string {
@@ -14,6 +16,6 @@ func (s *Sale) Name() string {
 	return s.name
 }
 
-func (s *Sale) Address() string {
+func (s *Sale) Address() address.Address {
 	return s.address
 }

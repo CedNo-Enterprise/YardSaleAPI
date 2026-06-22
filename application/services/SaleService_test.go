@@ -2,12 +2,28 @@ package services
 
 import (
 	"GarageSaleAPI/application/server"
+	"GarageSaleAPI/domain/address"
 	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/interfaces/requests"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
+)
+
+var validAddressRequest = requests.AddressRequest{
+	Line1:      "northern",
+	Line2:      "",
+	City:       "Washington",
+	State:      "WS",
+	PostalCode: "U1A 2C5",
+	Country:    "US",
+}
+
+var validAddress = address.CreateAddress(
+	"123e4567-e89b-12d3-a456-426614174111", "northern", nil,
+	"Washington", "WS", "U1A 2C5", "US", time.Now(),
 )
 
 func TestSaleService_AddSale(t *testing.T) {
@@ -29,7 +45,7 @@ func TestSaleService_AddSale(t *testing.T) {
 				service: NewSaleService(*s.GetSaleRepository()),
 				saleDTO: requests.SaleRequest{
 					Name:    "Best sale in the east",
-					Address: "123 road st",
+					Address: validAddressRequest,
 				},
 			},
 			wantErr: false,
@@ -40,7 +56,7 @@ func TestSaleService_AddSale(t *testing.T) {
 				service: NewSaleService(*s.GetSaleRepository()),
 				saleDTO: requests.SaleRequest{
 					Name:    "",
-					Address: "123 road st",
+					Address: validAddressRequest,
 				},
 			},
 			wantErr:     true,
@@ -65,7 +81,7 @@ func TestSaleService_GetSaleById(t *testing.T) {
 	s := server.NewAppServer()
 	repo := *s.GetSaleRepository()
 	saleId := uuid.NewString()
-	newSale := sale.CreateSale(saleId, "newSale", "123 road st")
+	newSale := sale.CreateSale(saleId, "newSale", validAddress)
 
 	type args struct {
 		service *SaleService
@@ -125,7 +141,7 @@ func Test_validateSale(t *testing.T) {
 			args: args{
 				saleDTO: requests.SaleRequest{
 					Name:    "Best sale in the east",
-					Address: "123 road st",
+					Address: validAddressRequest,
 				},
 			},
 			wantErr: false,
@@ -135,7 +151,7 @@ func Test_validateSale(t *testing.T) {
 			args: args{
 				saleDTO: requests.SaleRequest{
 					Name:    "",
-					Address: "123 road st",
+					Address: validAddressRequest,
 				},
 			},
 			wantErr:     true,
@@ -146,7 +162,7 @@ func Test_validateSale(t *testing.T) {
 			args: args{
 				saleDTO: requests.SaleRequest{
 					Name:    "This sale name is way too long for our liking and will be deemed invalid",
-					Address: "123 road st",
+					Address: validAddressRequest,
 				},
 			},
 			wantErr:     true,
@@ -156,8 +172,7 @@ func Test_validateSale(t *testing.T) {
 			name: "invalid sale empty address",
 			args: args{
 				saleDTO: requests.SaleRequest{
-					Name:    "Best sale in the east",
-					Address: "",
+					Name: "Best sale in the east",
 				},
 			},
 			wantErr:     true,
