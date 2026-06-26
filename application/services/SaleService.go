@@ -4,6 +4,7 @@ import (
 	"GarageSaleAPI/domain/address"
 	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/interfaces/requests"
+	"context"
 	"errors"
 	"log/slog"
 	"time"
@@ -30,7 +31,7 @@ func validateSale(saleDTO requests.SaleRequest) error {
 	return nil
 }
 
-func (service *SaleService) AddSale(saleDTO requests.SaleRequest) (*string, error) {
+func (service *SaleService) AddSale(ctx context.Context, saleDTO requests.SaleRequest) (*string, error) {
 	err := validateSale(saleDTO)
 	if err != nil {
 		return nil, err
@@ -46,7 +47,7 @@ func (service *SaleService) AddSale(saleDTO requests.SaleRequest) (*string, erro
 	saleId := uuid.NewString()
 	s := sale.CreateSale(saleId, saleDTO.Name, a)
 
-	err = service.saleRepository.AddSale(s)
+	err = service.saleRepository.Save(ctx, s)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, err
@@ -55,8 +56,8 @@ func (service *SaleService) AddSale(saleDTO requests.SaleRequest) (*string, erro
 	return &saleId, nil
 }
 
-func (service *SaleService) GetSaleById(saleId string) (*sale.Sale, error) {
-	s, err := service.saleRepository.GetSaleById(saleId)
+func (service *SaleService) GetSaleById(ctx context.Context, saleId string) (*sale.Sale, error) {
+	s, err := service.saleRepository.GetById(ctx, saleId)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, err

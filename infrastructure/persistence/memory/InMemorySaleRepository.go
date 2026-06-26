@@ -2,6 +2,7 @@ package memory
 
 import (
 	"GarageSaleAPI/domain/sale"
+	"context"
 	"errors"
 )
 
@@ -9,8 +10,12 @@ type InMemorySaleRepository struct {
 	saleList []sale.Sale
 }
 
-func (repo *InMemorySaleRepository) AddSale(sale sale.Sale) error {
-	duplicate, _ := repo.GetSaleById(sale.Id())
+func (repo *InMemorySaleRepository) Save(ctx context.Context, sale sale.Sale) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	duplicate, _ := repo.GetById(ctx, sale.Id())
 	if duplicate != nil {
 		return errors.New("sale already exists")
 	}
@@ -19,7 +24,11 @@ func (repo *InMemorySaleRepository) AddSale(sale sale.Sale) error {
 	return nil
 }
 
-func (repo *InMemorySaleRepository) GetSaleById(id string) (*sale.Sale, error) {
+func (repo *InMemorySaleRepository) GetById(ctx context.Context, id string) (*sale.Sale, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	for _, value := range repo.saleList {
 		if value.Id() == id {
 			return &value, nil

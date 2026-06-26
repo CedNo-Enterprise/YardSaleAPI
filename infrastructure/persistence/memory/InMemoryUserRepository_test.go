@@ -2,6 +2,8 @@ package memory
 
 import (
 	"GarageSaleAPI/domain/user"
+	"GarageSaleAPI/test"
+	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -13,6 +15,7 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 	}
 	type args struct {
 		user user.User
+		ctx  context.Context
 	}
 
 	validUser := user.CreateUser("username", "password", "email@email.com", time.Now())
@@ -31,6 +34,7 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 			},
 			args: args{
 				user: validUser,
+				ctx:  test.CreateTestContext(t),
 			},
 			wantErr: false,
 			textErr: "",
@@ -42,9 +46,34 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 			},
 			args: args{
 				user: validUser,
+				ctx:  test.CreateTestContext(t),
 			},
 			wantErr: true,
 			textErr: "user already exists",
+		},
+		{
+			name: "add user with timed out context",
+			fields: fields{
+				UserList: []user.User{},
+			},
+			args: args{
+				user: validUser,
+				ctx:  test.CreateTimedOutTestContext(t),
+			},
+			wantErr: true,
+			textErr: context.DeadlineExceeded.Error(),
+		},
+		{
+			name: "add user with cancelled context",
+			fields: fields{
+				UserList: []user.User{},
+			},
+			args: args{
+				user: validUser,
+				ctx:  test.CreateCancelledTestContext(),
+			},
+			wantErr: true,
+			textErr: context.Canceled.Error(),
 		},
 	}
 
@@ -53,7 +82,7 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 			repo := InMemoryUserRepository{
 				UserList: tt.fields.UserList,
 			}
-			err := repo.AddUser(tt.args.user)
+			err := repo.AddUser(tt.args.ctx, tt.args.user)
 			if err != nil && !tt.wantErr ||
 				((err != nil) && err.Error() != tt.textErr) {
 				t.Errorf("InMemoryUserRepository.AddUser() error = %v, wantErr %v\ntext = %v, textErr = %v",
@@ -69,6 +98,7 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 	}
 	type args struct {
 		username string
+		ctx      context.Context
 	}
 
 	validUser := user.CreateUser("username", "password", "email@email.com", time.Now())
@@ -88,6 +118,7 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 			},
 			args: args{
 				username: "username",
+				ctx:      test.CreateTestContext(t),
 			},
 			want:    &validUser,
 			wantErr: false,
@@ -100,6 +131,7 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 			},
 			args: args{
 				username: "username",
+				ctx:      test.CreateTestContext(t),
 			},
 			want:    nil,
 			wantErr: true,
@@ -112,10 +144,36 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 			},
 			args: args{
 				username: "InvalidUsername",
+				ctx:      test.CreateTestContext(t),
 			},
 			want:    nil,
 			wantErr: true,
 			textErr: "user not found",
+		}, {
+			name: "get user timed out context",
+			fields: fields{
+				UserList: []user.User{validUser},
+			},
+			args: args{
+				username: "username",
+				ctx:      test.CreateTimedOutTestContext(t),
+			},
+			want:    nil,
+			wantErr: true,
+			textErr: context.DeadlineExceeded.Error(),
+		},
+		{
+			name: "get user with cancelled context",
+			fields: fields{
+				UserList: []user.User{validUser},
+			},
+			args: args{
+				username: "username",
+				ctx:      test.CreateCancelledTestContext(),
+			},
+			want:    nil,
+			wantErr: true,
+			textErr: context.Canceled.Error(),
 		},
 	}
 
@@ -124,7 +182,7 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 			repo := InMemoryUserRepository{
 				UserList: tt.fields.UserList,
 			}
-			got, err := repo.GetUserByUsername(tt.args.username)
+			got, err := repo.GetUserByUsername(tt.args.ctx, tt.args.username)
 			if err != nil && !tt.wantErr ||
 				((err != nil) && err.Error() != tt.textErr) {
 				t.Errorf("InMemoryUserRepository.AddUser() error = %v, wantErr %v\ntext = %v, textErr = %v",

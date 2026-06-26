@@ -3,6 +3,8 @@ package memory
 import (
 	"GarageSaleAPI/domain/address"
 	"GarageSaleAPI/domain/sale"
+	"GarageSaleAPI/test"
+	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -19,6 +21,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 	}
 	type args struct {
 		sale sale.Sale
+		ctx  context.Context
 	}
 
 	validSale := sale.CreateSale(
@@ -41,6 +44,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 			},
 			args: args{
 				sale: validSale,
+				ctx:  test.CreateTestContext(t),
 			},
 			wantErr: false,
 		},
@@ -51,9 +55,34 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 			},
 			args: args{
 				sale: validSale,
+				ctx:  test.CreateTestContext(t),
 			},
 			wantErr:     true,
 			wantErrText: "sale already exists",
+		},
+		{
+			name: "add sale with timed out context",
+			fields: fields{
+				[]sale.Sale{},
+			},
+			args: args{
+				sale: validSale,
+				ctx:  test.CreateTimedOutTestContext(t),
+			},
+			wantErr:     true,
+			wantErrText: context.DeadlineExceeded.Error(),
+		},
+		{
+			name: "add sale with cancelled context",
+			fields: fields{
+				[]sale.Sale{},
+			},
+			args: args{
+				sale: validSale,
+				ctx:  test.CreateCancelledTestContext(),
+			},
+			wantErr:     true,
+			wantErrText: context.Canceled.Error(),
 		},
 	}
 	for _, tt := range tests {
@@ -62,7 +91,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 				saleList: tt.fields.SaleList,
 			}
 
-			err := repo.AddSale(tt.args.sale)
+			err := repo.Save(tt.args.ctx, tt.args.sale)
 
 			if (err != nil) != tt.wantErr ||
 				((err != nil) && err.Error() != tt.wantErrText) {
@@ -78,7 +107,8 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 		SaleList []sale.Sale
 	}
 	type args struct {
-		id string
+		id  string
+		ctx context.Context
 	}
 
 	validId := "123e4567-e89b-12d3-a456-426614174000"
@@ -102,7 +132,8 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 				[]sale.Sale{validSale},
 			},
 			args: args{
-				validId,
+				id:  validId,
+				ctx: test.CreateTestContext(t),
 			},
 			want:    &validSale,
 			wantErr: false,
@@ -119,7 +150,8 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 				},
 			},
 			args: args{
-				validId,
+				id:  validId,
+				ctx: test.CreateTestContext(t),
 			},
 			want:        nil,
 			wantErr:     true,
@@ -131,11 +163,38 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 				[]sale.Sale{},
 			},
 			args: args{
-				validId,
+				id:  validId,
+				ctx: test.CreateTestContext(t),
 			},
 			want:        nil,
 			wantErr:     true,
 			wantErrText: "sale not found",
+		},
+		{
+			name: "get sale with timed out context",
+			fields: fields{
+				[]sale.Sale{validSale},
+			},
+			args: args{
+				id:  validId,
+				ctx: test.CreateTimedOutTestContext(t),
+			},
+			want:        nil,
+			wantErr:     true,
+			wantErrText: context.DeadlineExceeded.Error(),
+		},
+		{
+			name: "get sale with cancelled context",
+			fields: fields{
+				[]sale.Sale{validSale},
+			},
+			args: args{
+				id:  validId,
+				ctx: test.CreateCancelledTestContext(),
+			},
+			want:        nil,
+			wantErr:     true,
+			wantErrText: context.Canceled.Error(),
 		},
 	}
 
@@ -145,7 +204,7 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 				saleList: tt.fields.SaleList,
 			}
 
-			got, err := repo.GetSaleById(tt.args.id)
+			got, err := repo.GetById(tt.args.ctx, tt.args.id)
 
 			if (err != nil) != tt.wantErr ||
 				((err != nil) && err.Error() != tt.wantErrText) {

@@ -1,10 +1,12 @@
 package test
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func ValidateExpectedCodeAndBody(w *httptest.ResponseRecorder, t *testing.T, expectedCode int, expectedBody string) {
@@ -36,4 +38,23 @@ func CreateRequestWithPathParam(
 	request.SetPathValue(pathParam, pathParamValue)
 
 	return request
+}
+
+func CreateTestContext(t *testing.T) context.Context {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+	return ctx
+}
+
+func CreateTimedOutTestContext(t *testing.T) context.Context {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	time.Sleep(5 * time.Millisecond)
+	t.Cleanup(cancel)
+	return ctx
+}
+
+func CreateCancelledTestContext() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	return ctx
 }

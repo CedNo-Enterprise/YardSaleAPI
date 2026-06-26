@@ -4,6 +4,7 @@ import (
 	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/domain/user"
 	"GarageSaleAPI/interfaces/requests"
+	"GarageSaleAPI/test"
 	"testing"
 )
 
@@ -47,11 +48,12 @@ func TestAddUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := test.CreateTestContext(t)
 			t.Cleanup(func() {
 				s = server.NewAppServer()
 			})
 
-			if err := tt.args.userService.AddUser(tt.args.userDTO); (err != nil) != tt.wantErr ||
+			if err := tt.args.userService.AddUser(ctx, tt.args.userDTO); (err != nil) != tt.wantErr ||
 				((err != nil) && err.Error() != tt.textErr) {
 				t.Errorf(
 					"AddUser()\nerror = %v, wantErr %v\ntext = %v, textErr = %v",
@@ -98,15 +100,16 @@ func TestGetUserByUsername(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := test.CreateTestContext(t)
 			t.Cleanup(func() {
 				s = server.NewAppServer()
 			})
 
-			e := tt.args.userService.AddUser(uDTO)
+			e := tt.args.userService.AddUser(ctx, uDTO)
 			if e != nil && !tt.wantErr {
 				t.Errorf("AddUser() error = %v, wantErr %v", e, tt.wantErr)
 			}
-			_, err := tt.args.userService.GetUserByUsername(tt.args.username)
+			_, err := tt.args.userService.GetUserByUsername(ctx, tt.args.username)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetUserByUsername() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -5,6 +5,7 @@ import (
 	"GarageSaleAPI/domain/address"
 	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/interfaces/requests"
+	"GarageSaleAPI/test"
 	"reflect"
 	"testing"
 	"time"
@@ -65,11 +66,12 @@ func TestSaleService_AddSale(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := test.CreateTestContext(t)
 			t.Cleanup(func() {
 				s = server.NewAppServer()
 			})
 
-			if _, err := tt.args.service.AddSale(tt.args.saleDTO); (err != nil) != tt.wantErr ||
+			if _, err := tt.args.service.AddSale(ctx, tt.args.saleDTO); (err != nil) != tt.wantErr ||
 				(err != nil) && err.Error() != tt.wantErrText {
 				t.Errorf("AddSale() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -113,8 +115,9 @@ func TestSaleService_GetSaleById(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_ = repo.AddSale(newSale)
-			got, err := tt.args.service.GetSaleById(tt.args.saleId)
+			ctx := test.CreateTestContext(t)
+			_ = repo.Save(ctx, newSale)
+			got, err := tt.args.service.GetSaleById(ctx, tt.args.saleId)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetSaleById() error = %v, wantErr %v", err, tt.wantErr)
 				return

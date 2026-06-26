@@ -1,6 +1,8 @@
 package user
 
+import "context"
+
 type UserRepository interface {
-	AddUser(user User) error
-	GetUserByUsername(username string) (*User, error)
+	AddUser(ctx context.Context, user User) error
+	GetUserByUsername(ctx context.Context, username string) (*User, error)
 }

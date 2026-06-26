@@ -3,6 +3,7 @@ package services
 import (
 	"GarageSaleAPI/domain/user"
 	"GarageSaleAPI/interfaces/requests"
+	"context"
 	"errors"
 	"log/slog"
 	"time"
@@ -27,14 +28,14 @@ func validateUser(userDTO requests.UserRequest) error {
 	return nil
 }
 
-func (service *UserService) AddUser(userDTO requests.UserRequest) error {
+func (service *UserService) AddUser(ctx context.Context, userDTO requests.UserRequest) error {
 	userError := validateUser(userDTO)
 	if userError != nil {
 		return userError
 	}
 
 	newUser := user.CreateUser(userDTO.Username, userDTO.Password, userDTO.Email, time.Now())
-	err := service.userRepository.AddUser(newUser)
+	err := service.userRepository.AddUser(ctx, newUser)
 	if err != nil {
 		slog.Error(err.Error())
 		return err
@@ -43,8 +44,8 @@ func (service *UserService) AddUser(userDTO requests.UserRequest) error {
 	return nil
 }
 
-func (service *UserService) GetUserByUsername(username string) (*user.User, error) {
-	u, err := service.userRepository.GetUserByUsername(username)
+func (service *UserService) GetUserByUsername(ctx context.Context, username string) (*user.User, error) {
+	u, err := service.userRepository.GetUserByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}

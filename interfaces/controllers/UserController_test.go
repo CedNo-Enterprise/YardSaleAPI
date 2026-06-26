@@ -101,6 +101,7 @@ func Test_getUser(t *testing.T) {
 		r *http.Request
 	}
 
+	ctx := test.CreateTestContext(t)
 	s := server.NewAppServer()
 	service := services.NewUserService(*s.GetUserRepository())
 	controller := *NewUserController(service)
@@ -111,7 +112,7 @@ func Test_getUser(t *testing.T) {
 		Password: "MDP!@#111111111",
 		Email:    "email@email.com",
 	}
-	e := service.AddUser(userToAdd)
+	e := service.AddUser(ctx, userToAdd)
 	if e != nil {
 		t.Fatal(e.Error())
 	}

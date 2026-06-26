@@ -97,7 +97,8 @@ func TestSaleController_getSale(t *testing.T) {
 			Country:    "US",
 		},
 	}
-	_, err := service.AddSale(saleToAdd)
+	ctx := test.CreateTestContext(t)
+	_, err := service.AddSale(ctx, saleToAdd)
 	if err != nil {
 		t.Fatal(err)
 	}

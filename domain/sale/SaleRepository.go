@@ -1,6 +1,8 @@
 package sale
 
+import "context"
+
 type SaleRepository interface {
-	AddSale(sale Sale) error
-	GetSaleById(id string) (*Sale, error)
+	Save(ctx context.Context, sale Sale) error
+	GetById(ctx context.Context, id string) (*Sale, error)
 }

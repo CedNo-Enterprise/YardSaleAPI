@@ -34,7 +34,7 @@ func (controller *UserController) addUser(w http.ResponseWriter, r *http.Request
 	var userDTO requests.UserRequest
 	interfaces.Decode(w, decoder, &userDTO)
 
-	err := controller.userService.AddUser(userDTO)
+	err := controller.userService.AddUser(r.Context(), userDTO)
 	if err != nil {
 		slog.Error("error adding user", "err", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -47,7 +47,7 @@ func (controller *UserController) addUser(w http.ResponseWriter, r *http.Request
 func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request) {
 	username := r.PathValue("username")
 
-	u, err := controller.userService.GetUserByUsername(username)
+	u, err := controller.userService.GetUserByUsername(r.Context(), username)
 	if err != nil {
 		slog.Error("Error getting user by username", "username", username, "err", err)
 		http.Error(w, "user not found", http.StatusNotFound)
