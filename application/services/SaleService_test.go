@@ -6,7 +6,6 @@ import (
 	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/test"
-	"context"
 	"reflect"
 	"testing"
 	"time"
@@ -88,7 +87,6 @@ func TestSaleService_GetSaleById(t *testing.T) {
 	newSale := sale.CreateSale(saleId, "newSale", validAddress)
 
 	type args struct {
-		ctx     context.Context
 		service *SaleService
 		saleId  string
 	}
@@ -101,7 +99,6 @@ func TestSaleService_GetSaleById(t *testing.T) {
 		{
 			name: "Get sale by id",
 			args: args{
-				ctx:     test.CreateTestContext(t),
 				service: NewSaleService(repo),
 				saleId:  saleId,
 			},
@@ -111,7 +108,6 @@ func TestSaleService_GetSaleById(t *testing.T) {
 		{
 			name: "Get nonexistent sale by id",
 			args: args{
-				ctx:     test.CreateTestContext(t),
 				service: NewSaleService(repo),
 				saleId:  "123",
 			},
@@ -121,7 +117,7 @@ func TestSaleService_GetSaleById(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_ = repo.Save(ctx, newSale)
-			got, err := tt.args.service.GetSaleById(tt.args.ctx, tt.args.saleId)
+			got, err := tt.args.service.GetSaleById(ctx, tt.args.saleId)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetSaleById() error = %v, wantErr %v", err, tt.wantErr)
 				return

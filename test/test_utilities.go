@@ -53,7 +53,7 @@ func CreateTimedOutTestContext(t *testing.T) context.Context {
 	return ctx
 }
 
-func CreateCancelledTestContext(t *testing.T) context.Context {
+func CreateCancelledTestContext() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	return ctx

@@ -70,7 +70,7 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 			},
 			args: args{
 				user: validUser,
-				ctx:  test.CreateCancelledTestContext(t),
+				ctx:  test.CreateCancelledTestContext(),
 			},
 			wantErr: true,
 			textErr: context.Canceled.Error(),
@@ -169,7 +169,7 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 			},
 			args: args{
 				username: "username",
-				ctx:      test.CreateCancelledTestContext(t),
+				ctx:      test.CreateCancelledTestContext(),
 			},
 			want:    nil,
 			wantErr: true,

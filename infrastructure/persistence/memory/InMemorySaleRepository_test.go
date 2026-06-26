@@ -79,7 +79,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 			},
 			args: args{
 				sale: validSale,
-				ctx:  test.CreateCancelledTestContext(t),
+				ctx:  test.CreateCancelledTestContext(),
 			},
 			wantErr:     true,
 			wantErrText: context.Canceled.Error(),
@@ -190,7 +190,7 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 			},
 			args: args{
 				id:  validId,
-				ctx: test.CreateCancelledTestContext(t),
+				ctx: test.CreateCancelledTestContext(),
 			},
 			want:        nil,
 			wantErr:     true,

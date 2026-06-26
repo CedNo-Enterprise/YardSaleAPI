@@ -5,16 +5,15 @@ import (
 	"GarageSaleAPI/domain/user"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/test"
-	"context"
 	"testing"
 )
 
 func TestAddUser(t *testing.T) {
+	ctx := test.CreateTestContext(t)
 	s := server.NewAppServer()
 	type args struct {
 		userService *UserService
 		userDTO     requests.UserRequest
-		ctx         context.Context
 	}
 	tests := []struct {
 		name    string
@@ -31,7 +30,6 @@ func TestAddUser(t *testing.T) {
 					Password: "password1111111",
 					Email:    "email@email.com",
 				},
-				ctx: test.CreateTestContext(t),
 			},
 			wantErr: false,
 		},
@@ -44,7 +42,6 @@ func TestAddUser(t *testing.T) {
 					Password: "password1111111",
 					Email:    "email",
 				},
-				ctx: test.CreateTestContext(t),
 			},
 			wantErr: true,
 			textErr: "invalid user",
@@ -56,7 +53,7 @@ func TestAddUser(t *testing.T) {
 				s = server.NewAppServer()
 			})
 
-			if err := tt.args.userService.AddUser(tt.args.ctx, tt.args.userDTO); (err != nil) != tt.wantErr ||
+			if err := tt.args.userService.AddUser(ctx, tt.args.userDTO); (err != nil) != tt.wantErr ||
 				((err != nil) && err.Error() != tt.textErr) {
 				t.Errorf(
 					"AddUser()\nerror = %v, wantErr %v\ntext = %v, textErr = %v",
@@ -67,6 +64,7 @@ func TestAddUser(t *testing.T) {
 }
 
 func TestGetUserByUsername(t *testing.T) {
+	ctx := test.CreateTestContext(t)
 	s := server.NewAppServer()
 	uDTO := requests.UserRequest{
 		Username: "username",
@@ -77,7 +75,6 @@ func TestGetUserByUsername(t *testing.T) {
 	type args struct {
 		userService *UserService
 		username    string
-		ctx         context.Context
 	}
 	tests := []struct {
 		name    string
@@ -90,7 +87,6 @@ func TestGetUserByUsername(t *testing.T) {
 			args: args{
 				userService: NewUserService(*s.GetUserRepository()),
 				username:    "username",
-				ctx:         test.CreateTestContext(t),
 			},
 			wantErr: false,
 		},
@@ -99,7 +95,6 @@ func TestGetUserByUsername(t *testing.T) {
 			args: args{
 				userService: NewUserService(*s.GetUserRepository()),
 				username:    "fake-username",
-				ctx:         test.CreateTestContext(t),
 			},
 			wantErr: true,
 		},
@@ -110,11 +105,11 @@ func TestGetUserByUsername(t *testing.T) {
 				s = server.NewAppServer()
 			})
 
-			e := tt.args.userService.AddUser(tt.args.ctx, uDTO)
+			e := tt.args.userService.AddUser(ctx, uDTO)
 			if e != nil && !tt.wantErr {
 				t.Errorf("AddUser() error = %v, wantErr %v", e, tt.wantErr)
 			}
-			_, err := tt.args.userService.GetUserByUsername(tt.args.ctx, tt.args.username)
+			_, err := tt.args.userService.GetUserByUsername(ctx, tt.args.username)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetUserByUsername() error = %v, wantErr %v", err, tt.wantErr)
 				return
