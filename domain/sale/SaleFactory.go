@@ -5,7 +5,10 @@ import (
 	"time"
 )
 
-func CreateSale(id string, sellerId string, name string, address address.Address, date time.Time, description string, creationTime time.Time) Sale {
+func CreateSale(
+	id string, sellerId string, name string, address address.Address,
+	date time.Time, description string, creationTime time.Time,
+) Sale {
 	status := StatusScheduled
 	if date.Before(time.Now()) {
 		status = StatusActive
@@ -13,7 +16,7 @@ func CreateSale(id string, sellerId string, name string, address address.Address
 
 	return Sale{
 		id:          id,
-		sellerId:    id,
+		sellerId:    sellerId,
 		name:        name,
 		address:     address,
 		date:        date,
