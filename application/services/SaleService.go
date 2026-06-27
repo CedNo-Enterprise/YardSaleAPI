@@ -37,15 +37,17 @@ func (service *SaleService) AddSale(ctx context.Context, saleDTO requests.SaleRe
 		return nil, err
 	}
 
-	addressId := uuid.NewString()
-	a := address.CreateAddress(
-		addressId, saleDTO.Address.Line1, &saleDTO.Address.Line2,
+	saleAddress := address.CreateAddress(
+		saleDTO.Address.Line1, &saleDTO.Address.Line2,
 		saleDTO.Address.City, saleDTO.Address.State, saleDTO.Address.PostalCode,
-		saleDTO.Address.Country, time.Now(),
+		saleDTO.Address.Country,
 	)
 
 	saleId := uuid.NewString()
-	s := sale.CreateSale(saleId, saleDTO.Name, a)
+	s := sale.CreateSale(
+		saleId, saleDTO.SellerId, saleDTO.Name,
+		saleAddress, saleDTO.Date, saleDTO.Description, time.Now(),
+	)
 
 	err = service.saleRepository.Save(ctx, s)
 	if err != nil {

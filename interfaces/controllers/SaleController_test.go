@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 func TestSaleController_addSale(t *testing.T) {
@@ -86,8 +89,8 @@ func TestSaleController_getSale(t *testing.T) {
 	service := services.NewSaleService(*s.GetSaleRepository())
 	controller := *NewSaleController(service)
 
-	saleToAdd := requests.SaleRequest{
-		Name: "New Sale on the Block!",
+	saleToAdd := requests.SaleRequest{SellerId: uuid.NewString(),
+		Name: "Best sale in the east",
 		Address: requests.AddressRequest{
 			Line1:      "northern",
 			Line2:      "",
@@ -96,6 +99,7 @@ func TestSaleController_getSale(t *testing.T) {
 			PostalCode: "U1A 2C5",
 			Country:    "US",
 		},
+		Date: time.Now(),
 	}
 	ctx := test.CreateTestContext(t)
 	_, err := service.AddSale(ctx, saleToAdd)

@@ -1,9 +1,6 @@
 package address
 
-import "time"
-
 type Address struct {
-	id         string
 	line1      string
 	line2      *string
 	city       string
@@ -12,8 +9,6 @@ type Address struct {
 	country    string
 	latitude   float64
 	longitude  float64
-	createdAt  time.Time
-	updatedAt  time.Time
 }
 
 func (a *Address) Line1() string {

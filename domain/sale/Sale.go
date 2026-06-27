@@ -1,12 +1,45 @@
 package sale
 
-import "GarageSaleAPI/domain/address"
+import (
+	"GarageSaleAPI/domain/address"
+	"time"
+)
 
 type Sale struct {
-	id      string
-	name    string
-	address address.Address
+	id          string
+	sellerId    string
+	name        string
+	address     address.Address
+	date        time.Time
+	description string
+	items       []SaleItem
+	status      Status
+	createdAt   time.Time
 }
+
+type Status string
+
+const (
+	StatusScheduled Status = "scheduled"
+	StatusActive    Status = "active"
+	StatusCompleted Status = "completed"
+	StatusCancelled Status = "cancelled"
+)
+
+type SaleItem struct {
+	InventoryItemID string
+	Name            string
+	Price           float64
+	Status          SaleItemStatus
+}
+
+type SaleItemStatus string
+
+const (
+	SaleItemStatusAvailable SaleItemStatus = "available"
+	SaleItemStatusSold      SaleItemStatus = "sold"
+	SaleItemStatusReserved  SaleItemStatus = "reserved"
+)
 
 func (s *Sale) Id() string {
 	return s.id

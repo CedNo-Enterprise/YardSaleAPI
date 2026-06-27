@@ -23,8 +23,8 @@ var validAddressRequest = requests.AddressRequest{
 }
 
 var validAddress = address.CreateAddress(
-	"123e4567-e89b-12d3-a456-426614174111", "northern", nil,
-	"Washington", "WS", "U1A 2C5", "US", time.Now(),
+	"northern", nil,
+	"Washington", "WS", "U1A 2C5", "US",
 )
 
 func TestSaleService_AddSale(t *testing.T) {
@@ -45,8 +45,10 @@ func TestSaleService_AddSale(t *testing.T) {
 			args: args{
 				service: NewSaleService(*s.GetSaleRepository()),
 				saleDTO: requests.SaleRequest{
-					Name:    "Best sale in the east",
-					Address: validAddressRequest,
+					SellerId: uuid.NewString(),
+					Name:     "Best sale in the east",
+					Address:  validAddressRequest,
+					Date:     time.Now(),
 				},
 			},
 			wantErr: false,
@@ -83,7 +85,10 @@ func TestSaleService_GetSaleById(t *testing.T) {
 	s := server.NewAppServer()
 	repo := *s.GetSaleRepository()
 	saleId := uuid.NewString()
-	newSale := sale.CreateSale(saleId, "newSale", validAddress)
+	newSale := sale.CreateSale(
+		saleId, uuid.NewString(), "newSale",
+		validAddress, time.Now(), "", time.Now(),
+	)
 
 	type args struct {
 		service *SaleService
@@ -143,8 +148,10 @@ func Test_validateSale(t *testing.T) {
 			name: "valid sale",
 			args: args{
 				saleDTO: requests.SaleRequest{
-					Name:    "Best sale in the east",
-					Address: validAddressRequest,
+					SellerId: uuid.NewString(),
+					Name:     "Best sale in the east",
+					Address:  validAddressRequest,
+					Date:     time.Now(),
 				},
 			},
 			wantErr: false,

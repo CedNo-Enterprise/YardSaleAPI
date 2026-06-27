@@ -8,11 +8,14 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var validAddress = address.CreateAddress(
-	"123e4567-e89b-12d3-a456-426614174111", "northern", nil,
-	"Washington", "WS", "U1A 2C5", "US", time.Now(),
+	"northern", nil,
+	"Washington", "WS",
+	"U1A 2C5", "US",
 )
 
 func TestInMemorySaleRepository_AddSale(t *testing.T) {
@@ -25,9 +28,8 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 	}
 
 	validSale := sale.CreateSale(
-		"123e4567-e89b-12d3-a456-426614174000",
-		"Sale",
-		validAddress,
+		"123e4567-e89b-12d3-a456-426614174000", uuid.NewString(), "newSale",
+		validAddress, time.Now(), "", time.Now(),
 	)
 
 	tests := []struct {
@@ -113,9 +115,8 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 
 	validId := "123e4567-e89b-12d3-a456-426614174000"
 	validSale := sale.CreateSale(
-		validId,
-		"Sale",
-		validAddress,
+		validId, uuid.NewString(), "newSale",
+		validAddress, time.Now(), "", time.Now(),
 	)
 
 	tests := []struct {
@@ -143,9 +144,8 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 			fields: fields{
 				[]sale.Sale{
 					sale.CreateSale(
-						"123e4567-e89b-12d3-a456-426614485967",
-						"diff sale",
-						validAddress,
+						uuid.NewString(), uuid.NewString(), "different sale",
+						validAddress, time.Now(), "", time.Now(),
 					),
 				},
 			},
