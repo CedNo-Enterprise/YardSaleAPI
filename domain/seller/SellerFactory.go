@@ -9,6 +9,7 @@ func CreateSeller(id string, userId string, createdTime time.Time) Seller {
 		id:             id,
 		userId:         userId,
 		savedAddresses: []SavedAddress{},
+		inventory:      []InventoryItem{},
 		createdAt:      createdTime,
 	}
 }
