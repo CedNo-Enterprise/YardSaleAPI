@@ -1,4 +1,4 @@
-package user
+package seller
 
 import (
 	"GarageSaleAPI/domain/address"
@@ -17,4 +17,12 @@ type SavedAddress struct {
 	label     string
 	address   address.Address
 	isDefault bool
+}
+
+func (s *Seller) Id() string {
+	return s.id
+}
+
+func (s *Seller) UserId() string {
+	return s.id
 }

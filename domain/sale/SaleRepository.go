@@ -3,6 +3,6 @@ package sale
 import "context"
 
 type SaleRepository interface {
-	Save(ctx context.Context, sale Sale) error
-	GetById(ctx context.Context, id string) (*Sale, error)
+	Save(context.Context, Sale) error
+	GetById(context.Context, string) (*Sale, error)
 }
