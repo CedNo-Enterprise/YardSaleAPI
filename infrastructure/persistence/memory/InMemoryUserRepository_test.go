@@ -21,11 +21,12 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 	validUser := user.CreateUser("username", "password", "email@email.com", time.Now())
 
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-		textErr string
+		name       string
+		fields     fields
+		args       args
+		wantLength int
+		wantErr    bool
+		textErr    string
 	}{
 		{
 			name: "add user",
@@ -36,8 +37,9 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 				user: validUser,
 				ctx:  test.CreateTestContext(t),
 			},
-			wantErr: false,
-			textErr: "",
+			wantLength: 1,
+			wantErr:    false,
+			textErr:    "",
 		},
 		{
 			name: "add duplicate user",
@@ -48,8 +50,9 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 				user: validUser,
 				ctx:  test.CreateTestContext(t),
 			},
-			wantErr: true,
-			textErr: "user already exists",
+			wantLength: 1,
+			wantErr:    true,
+			textErr:    "user already exists",
 		},
 		{
 			name: "add user with timed out context",
@@ -60,8 +63,9 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 				user: validUser,
 				ctx:  test.CreateTimedOutTestContext(t),
 			},
-			wantErr: true,
-			textErr: context.DeadlineExceeded.Error(),
+			wantLength: 0,
+			wantErr:    true,
+			textErr:    context.DeadlineExceeded.Error(),
 		},
 		{
 			name: "add user with cancelled context",
@@ -72,21 +76,27 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 				user: validUser,
 				ctx:  test.CreateCancelledTestContext(),
 			},
-			wantErr: true,
-			textErr: context.Canceled.Error(),
+			wantLength: 0,
+			wantErr:    true,
+			textErr:    context.Canceled.Error(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := InMemoryUserRepository{
-				UserList: tt.fields.UserList,
+				userList: tt.fields.UserList,
 			}
+
 			err := repo.AddUser(tt.args.ctx, tt.args.user)
 			if err != nil && !tt.wantErr ||
 				((err != nil) && err.Error() != tt.textErr) {
 				t.Errorf("InMemoryUserRepository.AddUser() error = %v, wantErr %v\ntext = %v, textErr = %v",
 					err, tt.wantErr, err.Error(), tt.textErr)
+			}
+
+			if len(repo.userList) != tt.wantLength {
+				t.Errorf("len(sellerList) = %d, want %d", len(repo.userList), tt.wantLength)
 			}
 		})
 	}
@@ -180,7 +190,7 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := InMemoryUserRepository{
-				UserList: tt.fields.UserList,
+				userList: tt.fields.UserList,
 			}
 			got, err := repo.GetUserByUsername(tt.args.ctx, tt.args.username)
 			if err != nil && !tt.wantErr ||

@@ -36,6 +36,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 		name        string
 		fields      fields
 		args        args
+		wantLength  int
 		wantErr     bool
 		wantErrText string
 	}{
@@ -48,7 +49,8 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 				sale: validSale,
 				ctx:  test.CreateTestContext(t),
 			},
-			wantErr: false,
+			wantLength: 1,
+			wantErr:    false,
 		},
 		{
 			name: "add duplicate sale",
@@ -59,6 +61,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 				sale: validSale,
 				ctx:  test.CreateTestContext(t),
 			},
+			wantLength:  1,
 			wantErr:     true,
 			wantErrText: "sale already exists",
 		},
@@ -71,6 +74,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 				sale: validSale,
 				ctx:  test.CreateTimedOutTestContext(t),
 			},
+			wantLength:  0,
 			wantErr:     true,
 			wantErrText: context.DeadlineExceeded.Error(),
 		},
@@ -83,6 +87,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 				sale: validSale,
 				ctx:  test.CreateCancelledTestContext(),
 			},
+			wantLength:  0,
 			wantErr:     true,
 			wantErrText: context.Canceled.Error(),
 		},
@@ -99,6 +104,10 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 				((err != nil) && err.Error() != tt.wantErrText) {
 				t.Errorf("AddSale() error = %v, wantErr %v\ntext = %v, textErr = %v",
 					err, tt.wantErr, err.Error(), tt.wantErrText)
+			}
+
+			if len(repo.saleList) != tt.wantLength {
+				t.Errorf("len(sellerList) = %d, want %d", len(repo.saleList), tt.wantLength)
 			}
 		})
 	}

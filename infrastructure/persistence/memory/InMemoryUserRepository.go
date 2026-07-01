@@ -7,7 +7,7 @@ import (
 )
 
 type InMemoryUserRepository struct {
-	UserList []user.User
+	userList []user.User
 }
 
 func (repo *InMemoryUserRepository) AddUser(ctx context.Context, user user.User) error {
@@ -20,7 +20,7 @@ func (repo *InMemoryUserRepository) AddUser(ctx context.Context, user user.User)
 		return errors.New("user already exists")
 	}
 
-	repo.UserList = append(repo.UserList, user)
+	repo.userList = append(repo.userList, user)
 	return nil
 }
 
@@ -29,7 +29,7 @@ func (repo *InMemoryUserRepository) GetUserByUsername(ctx context.Context, usern
 		return nil, err
 	}
 
-	for _, foundUser := range repo.UserList {
+	for _, foundUser := range repo.userList {
 		if foundUser.Username() == username {
 			return &foundUser, nil
 		}
