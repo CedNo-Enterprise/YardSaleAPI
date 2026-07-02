@@ -18,7 +18,7 @@ func (s *Seller) Id() string {
 }
 
 func (s *Seller) UserId() string {
-	return s.id
+	return s.userId
 }
 
 type SavedAddress struct {

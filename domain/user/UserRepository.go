@@ -3,6 +3,6 @@ package user
 import "context"
 
 type UserRepository interface {
-	AddUser(context.Context, User) error
-	GetUserByUsername(context.Context, string) (*User, error)
+	Save(context.Context, User) error
+	GetByUsername(context.Context, string) (*User, error)
 }

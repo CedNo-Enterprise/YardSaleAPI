@@ -88,7 +88,7 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 				userList: tt.fields.UserList,
 			}
 
-			err := repo.AddUser(tt.args.ctx, tt.args.user)
+			err := repo.Save(tt.args.ctx, tt.args.user)
 			if err != nil && !tt.wantErr ||
 				((err != nil) && err.Error() != tt.textErr) {
 				t.Errorf("InMemoryUserRepository.AddUser() error = %v, wantErr %v\ntext = %v, textErr = %v",
@@ -192,7 +192,7 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 			repo := InMemoryUserRepository{
 				userList: tt.fields.UserList,
 			}
-			got, err := repo.GetUserByUsername(tt.args.ctx, tt.args.username)
+			got, err := repo.GetByUsername(tt.args.ctx, tt.args.username)
 			if err != nil && !tt.wantErr ||
 				((err != nil) && err.Error() != tt.textErr) {
 				t.Errorf("InMemoryUserRepository.AddUser() error = %v, wantErr %v\ntext = %v, textErr = %v",

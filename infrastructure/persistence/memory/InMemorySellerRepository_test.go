@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var validSeller = seller.CreateSeller("1", "1", time.Now())
+var validSeller = seller.CreateSeller("1", "user", time.Now())
 
 func TestInMemorySellerRepository_Save(t *testing.T) {
 	type fields struct {
@@ -206,7 +206,7 @@ func TestInMemorySellerRepository_GetByUserId(t *testing.T) {
 			},
 			args: args{
 				ctx:    test.CreateTestContext(t),
-				userId: "1",
+				userId: "user",
 			},
 			want:    &validSeller,
 			wantErr: false,
@@ -218,7 +218,7 @@ func TestInMemorySellerRepository_GetByUserId(t *testing.T) {
 			},
 			args: args{
 				ctx:    test.CreateTestContext(t),
-				userId: "1",
+				userId: "user",
 			},
 			want:        nil,
 			wantErr:     true,
@@ -231,7 +231,7 @@ func TestInMemorySellerRepository_GetByUserId(t *testing.T) {
 			},
 			args: args{
 				ctx:    test.CreateTimedOutTestContext(t),
-				userId: "1",
+				userId: "user",
 			},
 			want:        nil,
 			wantErr:     true,
@@ -244,7 +244,7 @@ func TestInMemorySellerRepository_GetByUserId(t *testing.T) {
 			},
 			args: args{
 				ctx:    test.CreateCancelledTestContext(),
-				userId: "1",
+				userId: "user",
 			},
 			want:        nil,
 			wantErr:     true,
