@@ -55,7 +55,7 @@ func (service *SellerService) GetSellerByUserId(ctx context.Context, userId stri
 }
 
 func (service *SellerService) userExists(ctx context.Context, userId string) bool {
-	u, err := service.userRepository.GetUserByUsername(ctx, userId)
+	u, err := service.userRepository.GetByUsername(ctx, userId)
 	if err != nil {
 		return false
 	}

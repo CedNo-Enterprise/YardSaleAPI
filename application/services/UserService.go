@@ -35,7 +35,7 @@ func (service *UserService) AddUser(ctx context.Context, userDTO requests.UserRe
 	}
 
 	newUser := user.CreateUser(userDTO.Username, userDTO.Password, userDTO.Email, time.Now())
-	err := service.userRepository.AddUser(ctx, newUser)
+	err := service.userRepository.Save(ctx, newUser)
 	if err != nil {
 		slog.Error(err.Error())
 		return err
@@ -45,7 +45,7 @@ func (service *UserService) AddUser(ctx context.Context, userDTO requests.UserRe
 }
 
 func (service *UserService) GetUserByUsername(ctx context.Context, username string) (*user.User, error) {
-	u, err := service.userRepository.GetUserByUsername(ctx, username)
+	u, err := service.userRepository.GetByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}

@@ -10,12 +10,12 @@ type InMemoryUserRepository struct {
 	userList []user.User
 }
 
-func (repo *InMemoryUserRepository) AddUser(ctx context.Context, user user.User) error {
+func (repo *InMemoryUserRepository) Save(ctx context.Context, user user.User) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
-	duplicate, _ := repo.GetUserByUsername(ctx, user.Username())
+	duplicate, _ := repo.GetByUsername(ctx, user.Username())
 	if duplicate != nil {
 		return errors.New("user already exists")
 	}
@@ -24,7 +24,7 @@ func (repo *InMemoryUserRepository) AddUser(ctx context.Context, user user.User)
 	return nil
 }
 
-func (repo *InMemoryUserRepository) GetUserByUsername(ctx context.Context, username string) (*user.User, error) {
+func (repo *InMemoryUserRepository) GetByUsername(ctx context.Context, username string) (*user.User, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}

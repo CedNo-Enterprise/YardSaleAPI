@@ -14,7 +14,7 @@ import (
 func TestSellerService_AddSeller(t *testing.T) {
 	s := server.NewAppServer()
 	userRepo := *s.GetUserRepository()
-	_ = userRepo.AddUser(
+	_ = userRepo.Save(
 		test.CreateTestContext(t),
 		user.CreateUser("user", "password", "email@email.com", time.Now()),
 	)
@@ -132,7 +132,7 @@ func TestSellerService_GetSellerById(t *testing.T) {
 func TestSellerService_GetSellerByUserId(t *testing.T) {
 	s := server.NewAppServer()
 	userRepo := *s.GetUserRepository()
-	_ = userRepo.AddUser(
+	_ = userRepo.Save(
 		test.CreateTestContext(t),
 		user.CreateUser("user", "password", "email@email.com", time.Now()),
 	)
