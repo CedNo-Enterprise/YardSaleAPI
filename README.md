@@ -1,1 +1,1 @@
-# GarageSaleAPI
+# YardSaleAPI
