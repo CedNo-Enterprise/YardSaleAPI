@@ -36,7 +36,7 @@ func (controller *SaleController) addSale(w http.ResponseWriter, r *http.Request
 
 	saleId, err := controller.saleService.AddSale(r.Context(), saleDTO)
 	if err != nil {
-		slog.Error("error adding user", "err", err.Error())
+		slog.Error("error adding sale", "err", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -50,7 +50,7 @@ func (controller *SaleController) getSale(w http.ResponseWriter, r *http.Request
 
 	s, err := controller.saleService.GetSaleById(r.Context(), saleId)
 	if err != nil {
-		slog.Error("error getting user", "err", err.Error())
+		slog.Error("error getting sale", "err", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

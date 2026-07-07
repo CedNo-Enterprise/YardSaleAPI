@@ -15,15 +15,15 @@ type SellerService struct {
 	userRepository   user.UserRepository
 }
 
-func NewSellerService(repo seller.SellerRepository) *SellerService {
-	return &SellerService{sellerRepository: repo}
+func NewSellerService(sellerRepo seller.SellerRepository, userRepo user.UserRepository) *SellerService {
+	return &SellerService{sellerRepository: sellerRepo, userRepository: userRepo}
 }
 
-func (service *SellerService) AddSeller(ctx context.Context, userId string) (*string, error) {
+func (service *SellerService) AddSeller(ctx context.Context, username string) (*string, error) {
 	sellerId := uuid.NewString()
-	s := seller.CreateSeller(sellerId, userId, time.Now())
+	s := seller.CreateSeller(sellerId, username, time.Now())
 
-	canAdd := service.userExists(ctx, userId)
+	canAdd := service.userExists(ctx, username)
 	if !canAdd {
 		return nil, errors.New("error adding seller")
 	}
@@ -45,8 +45,8 @@ func (service *SellerService) GetSellerById(ctx context.Context, sellerId string
 	return s, nil
 }
 
-func (service *SellerService) GetSellerByUserId(ctx context.Context, userId string) (*seller.Seller, error) {
-	s, err := service.sellerRepository.GetByUserId(ctx, userId)
+func (service *SellerService) GetSellerByUsername(ctx context.Context, username string) (*seller.Seller, error) {
+	s, err := service.sellerRepository.GetByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +54,8 @@ func (service *SellerService) GetSellerByUserId(ctx context.Context, userId stri
 	return s, nil
 }
 
-func (service *SellerService) userExists(ctx context.Context, userId string) bool {
-	u, err := service.userRepository.GetByUsername(ctx, userId)
+func (service *SellerService) userExists(ctx context.Context, username string) bool {
+	u, err := service.userRepository.GetByUsername(ctx, username)
 	if err != nil {
 		return false
 	}
