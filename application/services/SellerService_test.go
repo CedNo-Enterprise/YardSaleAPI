@@ -24,8 +24,8 @@ func TestSellerService_AddSeller(t *testing.T) {
 		userRepository   user.UserRepository
 	}
 	type args struct {
-		ctx    context.Context
-		userId string
+		ctx      context.Context
+		username string
 	}
 	tests := []struct {
 		name        string
@@ -41,20 +41,20 @@ func TestSellerService_AddSeller(t *testing.T) {
 				userRepository:   userRepo,
 			},
 			args: args{
-				ctx:    test.CreateTestContext(t),
-				userId: "user",
+				ctx:      test.CreateTestContext(t),
+				username: "user",
 			},
 			wantErr: false,
 		},
 		{
-			name: "Add seller with invalid userId",
+			name: "Add seller with invalid username",
 			fields: fields{
 				sellerRepository: *s.GetSellerRepository(),
 				userRepository:   userRepo,
 			},
 			args: args{
-				ctx:    test.CreateTestContext(t),
-				userId: "invalidUserId",
+				ctx:      test.CreateTestContext(t),
+				username: "invalidusername",
 			},
 			wantErr:     true,
 			wantErrText: "error adding seller",
@@ -66,12 +66,12 @@ func TestSellerService_AddSeller(t *testing.T) {
 				sellerRepository: tt.fields.sellerRepository,
 				userRepository:   tt.fields.userRepository,
 			}
-			got, err := service.AddSeller(tt.args.ctx, tt.args.userId)
+			got, err := service.AddSeller(tt.args.ctx, tt.args.username)
 			if (err != nil) != tt.wantErr || (err != nil) && err.Error() != tt.wantErrText {
 				t.Errorf("AddSeller() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			} else if err == nil && got == nil {
-				t.Errorf("AddSeller() got = %v, want userId", got)
+				t.Errorf("AddSeller() got = %v, want username", got)
 			}
 		})
 	}
@@ -129,7 +129,7 @@ func TestSellerService_GetSellerById(t *testing.T) {
 	}
 }
 
-func TestSellerService_GetSellerByUserId(t *testing.T) {
+func TestSellerService_GetSellerByUsername(t *testing.T) {
 	s := server.NewAppServer()
 	userRepo := *s.GetUserRepository()
 	_ = userRepo.Save(
@@ -140,8 +140,8 @@ func TestSellerService_GetSellerByUserId(t *testing.T) {
 	newSeller := seller.CreateSeller("1", "user", time.Now())
 
 	type args struct {
-		ctx    context.Context
-		userId string
+		ctx      context.Context
+		username string
 	}
 	tests := []struct {
 		name    string
@@ -152,17 +152,17 @@ func TestSellerService_GetSellerByUserId(t *testing.T) {
 		{
 			name: "Get added seller",
 			args: args{
-				ctx:    test.CreateTestContext(t),
-				userId: "user",
+				ctx:      test.CreateTestContext(t),
+				username: "user",
 			},
 			want:    &newSeller,
 			wantErr: false,
 		},
 		{
-			name: "Get seller with invalid userId",
+			name: "Get seller with invalid username",
 			args: args{
-				ctx:    test.CreateTestContext(t),
-				userId: "1",
+				ctx:      test.CreateTestContext(t),
+				username: "1",
 			},
 			want:    nil,
 			wantErr: true,
@@ -173,14 +173,14 @@ func TestSellerService_GetSellerByUserId(t *testing.T) {
 			_ = sellerRepo.Save(tt.args.ctx, newSeller)
 			service := &SellerService{sellerRepository: sellerRepo}
 
-			got, err := service.GetSellerByUserId(tt.args.ctx, tt.args.userId)
+			got, err := service.GetSellerByUsername(tt.args.ctx, tt.args.username)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetSellerByUserId() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetSellerByusername() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetSellerByUserId() got = %v, want %v", got, tt.want)
+				t.Errorf("GetSellerByusername() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

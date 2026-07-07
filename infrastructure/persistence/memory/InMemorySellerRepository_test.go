@@ -183,13 +183,13 @@ func TestInMemorySellerRepository_GetById(t *testing.T) {
 	}
 }
 
-func TestInMemorySellerRepository_GetByUserId(t *testing.T) {
+func TestInMemorySellerRepository_GetByUsername(t *testing.T) {
 	type fields struct {
 		sellerList []seller.Seller
 	}
 	type args struct {
-		ctx    context.Context
-		userId string
+		ctx      context.Context
+		username string
 	}
 	tests := []struct {
 		name        string
@@ -205,8 +205,8 @@ func TestInMemorySellerRepository_GetByUserId(t *testing.T) {
 				sellerList: []seller.Seller{validSeller},
 			},
 			args: args{
-				ctx:    test.CreateTestContext(t),
-				userId: "user",
+				ctx:      test.CreateTestContext(t),
+				username: "user",
 			},
 			want:    &validSeller,
 			wantErr: false,
@@ -217,8 +217,8 @@ func TestInMemorySellerRepository_GetByUserId(t *testing.T) {
 				sellerList: []seller.Seller{},
 			},
 			args: args{
-				ctx:    test.CreateTestContext(t),
-				userId: "user",
+				ctx:      test.CreateTestContext(t),
+				username: "user",
 			},
 			want:        nil,
 			wantErr:     true,
@@ -230,8 +230,8 @@ func TestInMemorySellerRepository_GetByUserId(t *testing.T) {
 				sellerList: []seller.Seller{},
 			},
 			args: args{
-				ctx:    test.CreateTimedOutTestContext(t),
-				userId: "user",
+				ctx:      test.CreateTimedOutTestContext(t),
+				username: "user",
 			},
 			want:        nil,
 			wantErr:     true,
@@ -243,8 +243,8 @@ func TestInMemorySellerRepository_GetByUserId(t *testing.T) {
 				sellerList: []seller.Seller{},
 			},
 			args: args{
-				ctx:    test.CreateCancelledTestContext(),
-				userId: "user",
+				ctx:      test.CreateCancelledTestContext(),
+				username: "user",
 			},
 			want:        nil,
 			wantErr:     true,
@@ -256,14 +256,14 @@ func TestInMemorySellerRepository_GetByUserId(t *testing.T) {
 			repo := &InMemorySellerRepository{
 				sellerList: tt.fields.sellerList,
 			}
-			got, err := repo.GetByUserId(tt.args.ctx, tt.args.userId)
+			got, err := repo.GetByUsername(tt.args.ctx, tt.args.username)
 			if (err != nil) != tt.wantErr ||
 				((err != nil) && err.Error() != tt.wantErrText) {
-				t.Errorf("GetByUserId() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetByUsername() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetByUserId() got = %v, want %v", got, tt.want)
+				t.Errorf("GetByUsername() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -37,13 +37,13 @@ func (repo *InMemorySellerRepository) GetById(ctx context.Context, id string) (*
 	return nil, errors.New("seller not found")
 }
 
-func (repo *InMemorySellerRepository) GetByUserId(ctx context.Context, userId string) (*seller.Seller, error) {
+func (repo *InMemorySellerRepository) GetByUsername(ctx context.Context, username string) (*seller.Seller, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 
 	for _, value := range repo.sellerList {
-		if value.UserId() == userId {
+		if value.Username() == username {
 			return &value, nil
 		}
 	}

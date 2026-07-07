@@ -35,8 +35,10 @@ func TestSaleController_addSale(t *testing.T) {
 					"POST",
 					"/sale",
 					bytes.NewBufferString(`{
+						"SellerId": "sellerId",
 						"Name": "New Sale on the Block!",
-    					"Address": "123 st road"
+    					"Address": {"line1":"northern","city":"Washington","state":"WS","postal_code":"U1A 2C5","country":"US"},
+						"Date": "2026-07-06T19:28:00Z"
 					}`),
 					"application/json"),
 			},
@@ -80,6 +82,10 @@ func TestSaleController_addSale(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			controller.addSale(tt.args.w, tt.args.r)
+
+			if tt.wantStatusCode != tt.args.w.Code {
+				t.Errorf("addSale() got status code = %v, want = %v", tt.args.w.Code, tt.wantStatusCode)
+			}
 		})
 	}
 }
@@ -89,8 +95,9 @@ func TestSaleController_getSale(t *testing.T) {
 	service := services.NewSaleService(*s.GetSaleRepository())
 	controller := *NewSaleController(service)
 
-	saleToAdd := requests.SaleRequest{SellerId: uuid.NewString(),
-		Name: "Best sale in the east",
+	saleToAdd := requests.SaleRequest{
+		SellerId: uuid.NewString(),
+		Name:     "Best sale in the east",
 		Address: requests.AddressRequest{
 			Line1:      "northern",
 			Line2:      "",
@@ -102,7 +109,7 @@ func TestSaleController_getSale(t *testing.T) {
 		Date: time.Now(),
 	}
 	ctx := test.CreateTestContext(t)
-	_, err := service.AddSale(ctx, saleToAdd)
+	saleId, err := service.AddSale(ctx, saleToAdd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,19 +128,19 @@ func TestSaleController_getSale(t *testing.T) {
 			name: "Get valid sale",
 			args: args{
 				w: httptest.NewRecorder(),
-				r: test.CreateRequestWithPathParam(http.MethodGet, "/sale/", nil, "username", "saleId"),
+				r: test.CreateRequestWithPathParam(http.MethodGet, "/sale/", nil, "id", *saleId),
 			},
 			wantStatusCode: http.StatusOK,
-			wantBody:       `{}`,
+			wantBody:       `{"name":"Best sale in the east","address":{"line1":"northern","city":"Washington","state":"WS","postal_code":"U1A 2C5","country":"US","latitude":0,"longitude":0}}` + "\n",
 		},
 		{
 			name: "Get nonexistent sale",
 			args: args{
 				w: httptest.NewRecorder(),
-				r: httptest.NewRequest(http.MethodGet, "/sale/10001", nil),
+				r: test.CreateRequestWithPathParam(http.MethodGet, "/sale/", nil, "id", "invalid saleId"),
 			},
-			wantStatusCode: http.StatusNotFound,
-			wantBody:       "user not found\n",
+			wantStatusCode: http.StatusBadRequest,
+			wantBody:       "sale not found\n",
 		},
 	}
 	for _, tt := range tests {
@@ -143,6 +150,13 @@ func TestSaleController_getSale(t *testing.T) {
 			})
 
 			controller.getSale(tt.args.w, tt.args.r)
+
+			if tt.wantStatusCode != tt.args.w.Code {
+				t.Errorf("getSale() got status code = %v, want = %v", tt.args.w.Code, tt.wantStatusCode)
+			}
+			if tt.wantBody != tt.args.w.Body.String() {
+				t.Errorf("getSale() got body = %v, want = %v", tt.args.w.Body.String(), tt.wantBody)
+			}
 		})
 	}
 }
