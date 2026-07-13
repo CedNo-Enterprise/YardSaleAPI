@@ -115,7 +115,8 @@ func TestSellerController_getSellerById(t *testing.T) {
 				w: httptest.NewRecorder(),
 				r: test.CreateRequestWithPathParam("POST", "/seller/", nil, "id", "invalid_seller_id"),
 			},
-			wantStatusCode: http.StatusBadRequest,
+			wantStatusCode: http.StatusNotFound,
+			wantBody:       "seller not found" + "\n",
 		},
 	}
 	for _, tt := range tests {
@@ -172,7 +173,8 @@ func TestSellerController_getSellerByUsername(t *testing.T) {
 				w: httptest.NewRecorder(),
 				r: test.CreateRequestWithPathParam("POST", "/seller/", nil, "username", "invalid_username"),
 			},
-			wantStatusCode: http.StatusBadRequest,
+			wantStatusCode: http.StatusNotFound,
+			wantBody:       "seller not found" + "\n",
 		},
 	}
 	for _, tt := range tests {

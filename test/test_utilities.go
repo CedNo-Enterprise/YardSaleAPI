@@ -1,7 +1,9 @@
 package test
 
 import (
+	"GarageSaleAPI/application/server/apperror"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -57,4 +59,16 @@ func CreateCancelledTestContext() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	return ctx
+}
+
+func AssertKind(t *testing.T, err error, want apperror.Kind) {
+	t.Helper()
+
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected *apperror.AppError, got %T: %v", err, err)
+	}
+	if appErr.Kind != want {
+		t.Errorf("expected Kind=%v, got Kind=%v (message: %q)", want, appErr.Kind, appErr.Message)
+	}
 }

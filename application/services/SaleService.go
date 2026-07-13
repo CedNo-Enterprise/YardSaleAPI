@@ -1,11 +1,11 @@
 package services
 
 import (
+	"GarageSaleAPI/application/server/apperror"
 	"GarageSaleAPI/domain/address"
 	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/interfaces/requests"
 	"context"
-	"errors"
 	"log/slog"
 	"time"
 
@@ -25,7 +25,7 @@ func validateSale(saleDTO requests.SaleRequest) error {
 	validate := validator.New()
 	err := validate.Struct(saleDTO)
 	if err != nil {
-		return errors.New("invalid sale")
+		return apperror.Invalid("invalid sale", err)
 	}
 
 	return nil
@@ -34,6 +34,7 @@ func validateSale(saleDTO requests.SaleRequest) error {
 func (service *SaleService) AddSale(ctx context.Context, saleDTO requests.SaleRequest) (*string, error) {
 	err := validateSale(saleDTO)
 	if err != nil {
+		slog.Error("error adding sale", "err", err.Error())
 		return nil, err
 	}
 

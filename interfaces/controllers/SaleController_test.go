@@ -139,7 +139,7 @@ func TestSaleController_getSale(t *testing.T) {
 				w: httptest.NewRecorder(),
 				r: test.CreateRequestWithPathParam(http.MethodGet, "/sale/", nil, "id", "invalid saleId"),
 			},
-			wantStatusCode: http.StatusBadRequest,
+			wantStatusCode: http.StatusNotFound,
 			wantBody:       "sale not found\n",
 		},
 	}
