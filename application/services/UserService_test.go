@@ -2,6 +2,7 @@ package services
 
 import (
 	"GarageSaleAPI/application/server"
+	"GarageSaleAPI/application/server/apperror"
 	"GarageSaleAPI/domain/user"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/test"
@@ -15,10 +16,10 @@ func TestAddUser(t *testing.T) {
 		userDTO     requests.UserRequest
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		textErr string
+		name        string
+		args        args
+		wantErr     bool
+		wantErrKind apperror.Kind
 	}{
 		{
 			name: "add valid user",
@@ -42,8 +43,8 @@ func TestAddUser(t *testing.T) {
 					Email:    "email",
 				},
 			},
-			wantErr: true,
-			textErr: "invalid user",
+			wantErr:     true,
+			wantErrKind: apperror.KindInvalid,
 		},
 	}
 	for _, tt := range tests {
@@ -53,11 +54,15 @@ func TestAddUser(t *testing.T) {
 				s = server.NewAppServer()
 			})
 
-			if err := tt.args.userService.AddUser(ctx, tt.args.userDTO); (err != nil) != tt.wantErr ||
-				((err != nil) && err.Error() != tt.textErr) {
+			err := tt.args.userService.AddUser(ctx, tt.args.userDTO)
+			if (err != nil) != tt.wantErr {
 				t.Errorf(
 					"AddUser()\nerror = %v, wantErr %v\ntext = %v, textErr = %v",
-					err, tt.wantErr, err.Error(), tt.textErr)
+					err, tt.wantErr, err.Error(), tt.wantErrKind)
+			}
+
+			if tt.wantErr {
+				test.AssertKind(t, err, tt.wantErrKind)
 			}
 		})
 	}
@@ -126,7 +131,7 @@ func Test_validateUser(t *testing.T) {
 		name        string
 		args        args
 		wantErr     bool
-		wantErrText string
+		wantErrKind apperror.Kind
 	}{
 		{
 			name: "valid user",
@@ -149,7 +154,7 @@ func Test_validateUser(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			wantErrText: "invalid user",
+			wantErrKind: apperror.KindInvalid,
 		},
 		{
 			name: "invalid short username",
@@ -161,7 +166,7 @@ func Test_validateUser(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			wantErrText: "invalid user",
+			wantErrKind: apperror.KindInvalid,
 		},
 		{
 			name: "invalid long username",
@@ -173,7 +178,7 @@ func Test_validateUser(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			wantErrText: "invalid user",
+			wantErrKind: apperror.KindInvalid,
 		},
 		{
 			name: "invalid characters in username",
@@ -185,7 +190,7 @@ func Test_validateUser(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			wantErrText: "invalid user",
+			wantErrKind: apperror.KindInvalid,
 		},
 		{
 			name: "invalid empty password",
@@ -197,7 +202,7 @@ func Test_validateUser(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			wantErrText: "invalid user",
+			wantErrKind: apperror.KindInvalid,
 		},
 		{
 			name: "invalid short password",
@@ -209,7 +214,7 @@ func Test_validateUser(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			wantErrText: "invalid user",
+			wantErrKind: apperror.KindInvalid,
 		},
 		{
 			name: "invalid long password",
@@ -221,7 +226,7 @@ func Test_validateUser(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			wantErrText: "invalid user",
+			wantErrKind: apperror.KindInvalid,
 		},
 	}
 
@@ -230,8 +235,10 @@ func Test_validateUser(t *testing.T) {
 			err := validateUser(tt.args.userDTO)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateUser() error = %v, wantErr %v", err, tt.wantErr)
-			} else if err != nil && err.Error() != tt.wantErrText {
-				t.Errorf("validateUser() error = %v, wantErrText %v", err, tt.wantErrText)
+			}
+
+			if tt.wantErr {
+				test.AssertKind(t, err, tt.wantErrKind)
 			}
 		})
 	}

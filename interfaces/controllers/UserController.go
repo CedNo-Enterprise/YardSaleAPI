@@ -1,12 +1,12 @@
 package controllers
 
 import (
+	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
 	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/interfaces/responses"
 	"encoding/json"
-	"log/slog"
 	"net/http"
 )
 
@@ -36,8 +36,7 @@ func (controller *UserController) addUser(w http.ResponseWriter, r *http.Request
 
 	err := controller.userService.AddUser(r.Context(), userDTO)
 	if err != nil {
-		slog.Error("error adding user", "err", err.Error())
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		server.WriteError(w, err)
 		return
 	}
 
@@ -49,8 +48,7 @@ func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request
 
 	u, err := controller.userService.GetUserByUsername(r.Context(), username)
 	if err != nil {
-		slog.Error("Error getting user by username", "username", username, "err", err)
-		http.Error(w, "user not found", http.StatusNotFound)
+		server.WriteError(w, err)
 		return
 	}
 

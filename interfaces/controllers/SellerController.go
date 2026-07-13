@@ -1,12 +1,12 @@
 package controllers
 
 import (
+	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
 	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/interfaces/responses"
 	"encoding/json"
-	"log/slog"
 	"net/http"
 )
 
@@ -39,8 +39,7 @@ func (controller *SellerController) addSeller(w http.ResponseWriter, r *http.Req
 
 	sellerId, err := controller.sellerService.AddSeller(r.Context(), sellerDTO.Username)
 	if err != nil {
-		slog.Error("error adding seller", "err", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
+		server.WriteError(w, err)
 		return
 	}
 
@@ -53,8 +52,7 @@ func (controller *SellerController) getSellerByUsername(w http.ResponseWriter, r
 
 	s, err := controller.sellerService.GetSellerByUsername(r.Context(), username)
 	if err != nil {
-		slog.Error("error getting seller", "err", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
+		server.WriteError(w, err)
 		return
 	}
 
@@ -71,8 +69,7 @@ func (controller *SellerController) getSellerById(w http.ResponseWriter, r *http
 
 	s, err := controller.sellerService.GetSellerById(r.Context(), id)
 	if err != nil {
-		slog.Error("error getting seller", "err", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
+		server.WriteError(w, err)
 		return
 	}
 

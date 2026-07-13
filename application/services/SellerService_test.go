@@ -2,6 +2,7 @@ package services
 
 import (
 	"GarageSaleAPI/application/server"
+	"GarageSaleAPI/application/server/apperror"
 	"GarageSaleAPI/domain/seller"
 	"GarageSaleAPI/domain/user"
 	"GarageSaleAPI/test"
@@ -32,7 +33,7 @@ func TestSellerService_AddSeller(t *testing.T) {
 		fields      fields
 		args        args
 		wantErr     bool
-		wantErrText string
+		wantErrKind apperror.Kind
 	}{
 		{
 			name: "Add seller",
@@ -57,7 +58,7 @@ func TestSellerService_AddSeller(t *testing.T) {
 				username: "invalidusername",
 			},
 			wantErr:     true,
-			wantErrText: "error adding seller",
+			wantErrKind: apperror.KindInvalid,
 		},
 	}
 	for _, tt := range tests {
@@ -67,11 +68,15 @@ func TestSellerService_AddSeller(t *testing.T) {
 				userRepository:   tt.fields.userRepository,
 			}
 			got, err := service.AddSeller(tt.args.ctx, tt.args.username)
-			if (err != nil) != tt.wantErr || (err != nil) && err.Error() != tt.wantErrText {
+			if (err != nil) != tt.wantErr {
 				t.Errorf("AddSeller() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			} else if err == nil && got == nil {
 				t.Errorf("AddSeller() got = %v, want username", got)
+			}
+
+			if tt.wantErr {
+				test.AssertKind(t, err, tt.wantErrKind)
 			}
 		})
 	}

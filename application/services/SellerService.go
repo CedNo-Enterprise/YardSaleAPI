@@ -1,10 +1,11 @@
 package services
 
 import (
+	"GarageSaleAPI/application/server/apperror"
 	"GarageSaleAPI/domain/seller"
 	"GarageSaleAPI/domain/user"
 	"context"
-	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,7 +26,9 @@ func (service *SellerService) AddSeller(ctx context.Context, username string) (*
 
 	canAdd := service.userExists(ctx, username)
 	if !canAdd {
-		return nil, errors.New("error adding seller")
+		err := apperror.Invalid("invalid username", nil)
+		slog.Error("invalid username", "err", err)
+		return nil, err
 	}
 
 	err := service.sellerRepository.Save(ctx, s)
@@ -39,6 +42,7 @@ func (service *SellerService) AddSeller(ctx context.Context, username string) (*
 func (service *SellerService) GetSellerById(ctx context.Context, sellerId string) (*seller.Seller, error) {
 	s, err := service.sellerRepository.GetById(ctx, sellerId)
 	if err != nil {
+		slog.Error("error getting seller", "err", err.Error())
 		return nil, err
 	}
 
@@ -48,6 +52,7 @@ func (service *SellerService) GetSellerById(ctx context.Context, sellerId string
 func (service *SellerService) GetSellerByUsername(ctx context.Context, username string) (*seller.Seller, error) {
 	s, err := service.sellerRepository.GetByUsername(ctx, username)
 	if err != nil {
+		slog.Error("error getting seller", "err", err.Error())
 		return nil, err
 	}
 

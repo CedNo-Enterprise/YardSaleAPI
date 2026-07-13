@@ -2,6 +2,7 @@ package services
 
 import (
 	"GarageSaleAPI/application/server"
+	"GarageSaleAPI/application/server/apperror"
 	"GarageSaleAPI/domain/address"
 	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/interfaces/requests"
@@ -38,7 +39,7 @@ func TestSaleService_AddSale(t *testing.T) {
 		name        string
 		args        args
 		wantErr     bool
-		wantErrText string
+		wantErrKind apperror.Kind
 	}{
 		{
 			name: "add valid sale",
@@ -63,7 +64,7 @@ func TestSaleService_AddSale(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			wantErrText: "invalid sale",
+			wantErrKind: apperror.KindInvalid,
 		},
 	}
 	for _, tt := range tests {
@@ -73,9 +74,13 @@ func TestSaleService_AddSale(t *testing.T) {
 				s = server.NewAppServer()
 			})
 
-			if _, err := tt.args.service.AddSale(ctx, tt.args.saleDTO); (err != nil) != tt.wantErr ||
-				(err != nil) && err.Error() != tt.wantErrText {
+			_, err := tt.args.service.AddSale(ctx, tt.args.saleDTO)
+			if (err != nil) != tt.wantErr {
 				t.Errorf("AddSale() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantErr {
+				test.AssertKind(t, err, tt.wantErrKind)
 			}
 		})
 	}
@@ -142,7 +147,7 @@ func Test_validateSale(t *testing.T) {
 		name        string
 		args        args
 		wantErr     bool
-		wantErrText string
+		wantErrKind apperror.Kind
 	}{
 		{
 			name: "valid sale",
@@ -165,7 +170,7 @@ func Test_validateSale(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			wantErrText: "invalid sale",
+			wantErrKind: apperror.KindInvalid,
 		},
 		{
 			name: "invalid sale long name",
@@ -176,7 +181,7 @@ func Test_validateSale(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			wantErrText: "invalid sale",
+			wantErrKind: apperror.KindInvalid,
 		},
 		{
 			name: "invalid sale empty address",
@@ -186,14 +191,18 @@ func Test_validateSale(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			wantErrText: "invalid sale",
+			wantErrKind: apperror.KindInvalid,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := validateSale(tt.args.saleDTO); (err != nil) != tt.wantErr ||
-				(err != nil) && err.Error() != tt.wantErrText {
+			err := validateSale(tt.args.saleDTO)
+			if (err != nil) != tt.wantErr {
 				t.Errorf("validateSale() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantErr {
+				test.AssertKind(t, err, tt.wantErrKind)
 			}
 		})
 	}
