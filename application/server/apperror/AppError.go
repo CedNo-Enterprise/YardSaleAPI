@@ -28,7 +28,7 @@ func (e *AppError) Unwrap() error {
 }
 
 func NotFound(msg string, err error) *AppError {
-	return &AppError{Kind: KindNotFound, Message: msg}
+	return &AppError{Kind: KindNotFound, Message: msg, Err: err}
 }
 
 func Invalid(msg string, err error) *AppError {
