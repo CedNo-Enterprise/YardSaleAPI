@@ -40,3 +40,10 @@ func ValidateContentType(w http.ResponseWriter, r *http.Request, t string) {
 		return
 	}
 }
+
+func WriteResponse(w http.ResponseWriter, response any, status int, contentType string) {
+	w.WriteHeader(status)
+	w.Header().Set("Content-Type", contentType)
+	Marshal(w, response)
+	Encode(w, response)
+}

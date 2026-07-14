@@ -54,8 +54,5 @@ func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request
 
 	response := responses.NewUserResponse(u)
 
-	interfaces.Marshal(w, response)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	interfaces.Encode(w, response)
+	interfaces.WriteResponse(w, response, http.StatusOK, "application/json")
 }
