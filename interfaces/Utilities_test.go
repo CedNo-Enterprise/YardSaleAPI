@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -99,4 +100,50 @@ func Test_givenNonMatchingContentType_whenValidateContentType_thenReturnOk(t *te
 	expectedBody := "invalid content type\n"
 
 	test.ValidateExpectedCodeAndBody(w, t, expectedCode, expectedBody)
+}
+
+func TestWriteResponse(t *testing.T) {
+	type args struct {
+		w           *httptest.ResponseRecorder
+		response    any
+		status      int
+		contentType string
+	}
+	tests := []struct {
+		name            string
+		args            args
+		wantStatusCode  int
+		wantBody        string
+		wantContentType string
+	}{
+		{
+			name: "Write response",
+			args: args{
+				w:           httptest.NewRecorder(),
+				response:    "{name: username, email: valid@email}",
+				status:      http.StatusOK,
+				contentType: "application/json",
+			},
+			wantStatusCode:  http.StatusOK,
+			wantBody:        `"{name: username, email: valid@email}"`,
+			wantContentType: "application/json",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			WriteResponse(tt.args.w, tt.args.response, tt.args.status, tt.args.contentType)
+
+			if tt.args.w.Code != tt.wantStatusCode {
+				t.Errorf("Expected %d, got %d", tt.wantStatusCode, tt.args.w.Code)
+			}
+
+			if strings.TrimSpace(tt.args.w.Body.String()) != tt.wantBody {
+				t.Errorf("Expected %s, got %s", tt.wantBody, tt.args.w.Body.String())
+			}
+
+			if tt.args.w.Header().Get("Content-Type") != tt.wantContentType {
+				t.Errorf("Expected %s, got %s", tt.wantContentType, tt.args.w.Header().Get("Content-Type"))
+			}
+		})
+	}
 }
