@@ -3,7 +3,7 @@ package controllers
 import (
 	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
-	"GarageSaleAPI/interfaces/requests"
+	"GarageSaleAPI/domain/user"
 	"GarageSaleAPI/test"
 	"bytes"
 	"fmt"
@@ -96,27 +96,23 @@ func Test_addUser(t *testing.T) {
 }
 
 func Test_getUser(t *testing.T) {
-	type args struct {
-		w *httptest.ResponseRecorder
-		r *http.Request
-	}
-
 	ctx := test.CreateTestContext(t)
 	s := server.NewAppServer()
-	service := services.NewUserService(*s.GetUserRepository())
+	userRepo := *s.GetUserRepository()
+	service := services.NewUserService(userRepo)
 	controller := *NewUserController(service)
 	creationTime := time.Now()
+	userToAdd := user.CreateUser("Edgouille", "MDP!@#111111111", "email@email.com", creationTime)
 
-	userToAdd := requests.UserRequest{
-		Username: "Edgouille",
-		Password: "MDP!@#111111111",
-		Email:    "email@email.com",
-	}
-	e := service.AddUser(ctx, userToAdd)
+	e := userRepo.Save(ctx, userToAdd)
 	if e != nil {
 		t.Fatal(e.Error())
 	}
 
+	type args struct {
+		w *httptest.ResponseRecorder
+		r *http.Request
+	}
 	tests := []struct {
 		name           string
 		args           args
