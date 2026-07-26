@@ -7,8 +7,10 @@ import (
 	"context"
 	"log/slog"
 	"time"
+	"unsafe"
 
 	"github.com/go-playground/validator/v10"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
@@ -35,7 +37,13 @@ func (service *UserService) AddUser(ctx context.Context, userDTO requests.UserRe
 		return err
 	}
 
-	newUser := user.CreateUser(userDTO.Username, userDTO.Password, userDTO.Email, time.Now())
+	hashedPassword, err := hashPassword(userDTO.Password)
+	if err != nil {
+		slog.Error("error adding user", "err", err.Error())
+		return err
+	}
+
+	newUser := user.CreateUser(userDTO.Username, hashedPassword, userDTO.Email, time.Now())
 	err = service.userRepository.Save(ctx, newUser)
 	if err != nil {
 		slog.Error(err.Error())
@@ -53,4 +61,15 @@ func (service *UserService) GetUserByUsername(ctx context.Context, username stri
 	}
 
 	return u, nil
+}
+
+func hashPassword(password string) (string, error) {
+	hashBytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		slog.Error("Error hashing password", "err", err.Error())
+		return "", err
+	}
+	hash := unsafe.String(&hashBytes[0], len(hashBytes))
+
+	return hash, nil
 }
