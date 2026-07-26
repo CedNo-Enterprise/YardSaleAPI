@@ -154,3 +154,74 @@ func Test_getUser(t *testing.T) {
 		})
 	}
 }
+
+func TestUserController_login(t *testing.T) {
+	ctx := test.CreateTestContext(t)
+	s := server.NewAppServer()
+	userRepo := *s.GetUserRepository()
+	service := services.NewUserService(userRepo)
+	controller := *NewUserController(service)
+	creationTime := time.Now()
+	userToAdd := user.CreateUser(
+		"Edgouille",
+		"$2a$14$/IhjU2PxRypamw1kLypfIeB28u32sgVtTL2EvCl8Ar.sUlPk77drO",
+		"email@email.com",
+		creationTime)
+
+	e := userRepo.Save(ctx, userToAdd)
+	if e != nil {
+		t.Fatal(e.Error())
+	}
+
+	type args struct {
+		w *httptest.ResponseRecorder
+		r *http.Request
+	}
+	tests := []struct {
+		name           string
+		args           args
+		wantStatusCode int
+	}{
+		{
+			name: "Login",
+			args: args{
+				w: httptest.NewRecorder(),
+				r: test.CreateRequest(
+					http.MethodPost,
+					"/login",
+					bytes.NewBufferString(`{
+						"Username":  "Edgouille",
+						"Password":  "MDP!@#111111111"
+					}`),
+					"application/json",
+				),
+			},
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			name: "Login",
+			args: args{
+				w: httptest.NewRecorder(),
+				r: test.CreateRequest(
+					http.MethodPost,
+					"/login",
+					bytes.NewBufferString(`{
+						"username":  "Edgouille",
+						"password":  "invalidPassword"
+					}`),
+					"application/json",
+				),
+			},
+			wantStatusCode: http.StatusUnauthorized,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controller.login(tt.args.w, tt.args.r)
+
+			if tt.wantStatusCode != tt.args.w.Code {
+				t.Errorf("getUser() got status code = %v, want = %v", tt.args.w.Code, tt.wantStatusCode)
+			}
+		})
+	}
+}

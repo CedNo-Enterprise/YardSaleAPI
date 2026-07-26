@@ -16,6 +16,10 @@ func (u User) Username() string {
 	return u.username
 }
 
+func (u User) Password() string {
+	return u.password
+}
+
 func (u User) Email() string {
 	return u.email
 }

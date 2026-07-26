@@ -21,6 +21,7 @@ func NewUserController(userService *services.UserService) *UserController {
 func (controller *UserController) AddUserHandlersToMux(mux *http.ServeMux) {
 	mux.HandleFunc("POST /user", controller.addUser)
 	mux.HandleFunc("GET /user/{username}", controller.getUser)
+	mux.HandleFunc("POST /login", controller.login)
 }
 
 func (controller *UserController) addUser(w http.ResponseWriter, r *http.Request) {
@@ -54,5 +55,26 @@ func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request
 
 	response := responses.NewUserResponse(u)
 
+	interfaces.WriteResponse(w, response, http.StatusOK, "application/json")
+}
+
+func (controller *UserController) login(w http.ResponseWriter, r *http.Request) {
+	interfaces.ValidateContentType(w, r, "application/json")
+
+	requestBody := http.MaxBytesReader(w, r.Body, 1048576)
+
+	decoder := json.NewDecoder(requestBody)
+	decoder.DisallowUnknownFields()
+
+	var loginDTO requests.LoginRequest
+	interfaces.Decode(w, decoder, &loginDTO)
+
+	u, expTime, token, err := controller.userService.Login(r.Context(), loginDTO)
+	if err != nil {
+		server.WriteError(w, err)
+		return
+	}
+
+	response := responses.NewLoginResponse(token, expTime, u)
 	interfaces.WriteResponse(w, response, http.StatusOK, "application/json")
 }
