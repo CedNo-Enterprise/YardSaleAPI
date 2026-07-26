@@ -6,6 +6,7 @@ import (
 	"GarageSaleAPI/domain/user"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/test"
+	"reflect"
 	"testing"
 )
 
@@ -239,6 +240,44 @@ func Test_validateUser(t *testing.T) {
 
 			if tt.wantErr {
 				test.AssertKind(t, err, tt.wantErrKind)
+			}
+		})
+	}
+}
+
+func TestUserService_hashPassword(t *testing.T) {
+	type args struct {
+		password string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "hash valid password",
+			args: args{
+				password: "password",
+			},
+			wantErr: false,
+		},
+		{
+			name: "hash invalid password",
+			args: args{
+				password: "passwordpasswordpasswordpasswordpasswordpasswordpasswordpasswordpassworda",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := hashPassword(tt.args.password)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("hashPassword() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if reflect.DeepEqual(got, tt.args.password) {
+				t.Errorf("hashPassword() got = %v, wanted hashed password", got)
 			}
 		})
 	}
