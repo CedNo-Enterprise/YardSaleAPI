@@ -278,7 +278,7 @@ func TestUserService_hashPassword(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := HashPassword(tt.args.password)
+			got, err := hashPassword(tt.args.password)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("hashPassword() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -291,7 +291,7 @@ func TestUserService_hashPassword(t *testing.T) {
 }
 
 func Test_comparePasswords(t *testing.T) {
-	hp, _ := HashPassword("password")
+	hp, _ := hashPassword("password")
 	type args struct {
 		hashedPassword string
 		plainPassword  string
@@ -409,7 +409,7 @@ func TestGenerateToken_FailsWithWrongKey(t *testing.T) {
 func TestUserService_Login(t *testing.T) {
 	s := server.NewAppServer()
 	userRepo := *s.GetUserRepository()
-	hashedPassword, _ := HashPassword("validPassword")
+	hashedPassword, _ := hashPassword("validPassword")
 	newUser := user.CreateUser("username", hashedPassword, "email@email.com", time.Now())
 	_ = userRepo.Save(context.Background(), newUser)
 	type fields struct {

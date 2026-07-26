@@ -41,7 +41,7 @@ func (service *UserService) AddUser(ctx context.Context, userDTO requests.UserRe
 		return err
 	}
 
-	hashedPassword, err := HashPassword(userDTO.Password)
+	hashedPassword, err := hashPassword(userDTO.Password)
 	if err != nil {
 		slog.Error("error adding user", "err", err.Error())
 		return err
@@ -67,7 +67,7 @@ func (service *UserService) GetUserByUsername(ctx context.Context, username stri
 	return u, nil
 }
 
-func HashPassword(password string) (string, error) {
+func hashPassword(password string) (string, error) {
 	hashBytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	if err != nil {
 		slog.Error("Error hashing password", "err", err.Error())

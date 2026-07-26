@@ -162,8 +162,11 @@ func TestUserController_login(t *testing.T) {
 	service := services.NewUserService(userRepo)
 	controller := *NewUserController(service)
 	creationTime := time.Now()
-	hashedPassword, _ := services.HashPassword("MDP!@#111111111")
-	userToAdd := user.CreateUser("Edgouille", hashedPassword, "email@email.com", creationTime)
+	userToAdd := user.CreateUser(
+		"Edgouille",
+		"$2a$14$/IhjU2PxRypamw1kLypfIeB28u32sgVtTL2EvCl8Ar.sUlPk77drO",
+		"email@email.com",
+		creationTime)
 
 	e := userRepo.Save(ctx, userToAdd)
 	if e != nil {
