@@ -7,11 +7,12 @@ import (
 )
 
 var statusByKind = map[apperror.Kind]int{
-	apperror.KindNotFound:  http.StatusNotFound,
-	apperror.KindInvalid:   http.StatusBadRequest,
-	apperror.KindConflict:  http.StatusConflict,
-	apperror.KindForbidden: http.StatusForbidden,
-	apperror.KindInternal:  http.StatusInternalServerError,
+	apperror.KindNotFound:     http.StatusNotFound,
+	apperror.KindInvalid:      http.StatusBadRequest,
+	apperror.KindConflict:     http.StatusConflict,
+	apperror.KindForbidden:    http.StatusForbidden,
+	apperror.KindUnauthorized: http.StatusUnauthorized,
+	apperror.KindInternal:     http.StatusInternalServerError,
 }
 
 func WriteError(w http.ResponseWriter, err error) {

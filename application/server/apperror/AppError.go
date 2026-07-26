@@ -3,11 +3,12 @@ package apperror
 type Kind string
 
 const (
-	KindNotFound  Kind = "not_found"
-	KindInvalid   Kind = "invalid"
-	KindConflict  Kind = "conflict"
-	KindForbidden Kind = "forbidden"
-	KindInternal  Kind = "internal"
+	KindNotFound     Kind = "not_found"
+	KindInvalid      Kind = "invalid"
+	KindConflict     Kind = "conflict"
+	KindForbidden    Kind = "forbidden"
+	KindUnauthorized Kind = "unauthorized"
+	KindInternal     Kind = "internal"
 )
 
 type AppError struct {
@@ -41,6 +42,10 @@ func Conflict(msg string, err error) *AppError {
 
 func Forbidden(msg string, err error) *AppError {
 	return &AppError{Kind: KindForbidden, Message: msg, Err: err}
+}
+
+func Unauthorized(msg string, err error) *AppError {
+	return &AppError{Kind: KindUnauthorized, Message: msg, Err: err}
 }
 
 func Internal(err error) *AppError {

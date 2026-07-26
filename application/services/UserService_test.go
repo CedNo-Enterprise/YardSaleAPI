@@ -6,8 +6,15 @@ import (
 	"GarageSaleAPI/domain/user"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/test"
+	"context"
+	"fmt"
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddUser(t *testing.T) {
@@ -278,6 +285,186 @@ func TestUserService_hashPassword(t *testing.T) {
 			}
 			if reflect.DeepEqual(got, tt.args.password) {
 				t.Errorf("hashPassword() got = %v, wanted hashed password", got)
+			}
+		})
+	}
+}
+
+func Test_comparePasswords(t *testing.T) {
+	hp, _ := hashPassword("password")
+	type args struct {
+		hashedPassword string
+		plainPassword  string
+	}
+	tests := []struct {
+		name        string
+		args        args
+		wantErr     bool
+		wantErrKind apperror.Kind
+	}{
+		{
+			name: "compare valid password",
+			args: args{
+				hashedPassword: hp,
+				plainPassword:  "password",
+			},
+			wantErr: false,
+		},
+		{
+			name: "compare invalid password",
+			args: args{
+				hashedPassword: hp,
+				plainPassword:  "NotTheRightPassword",
+			},
+			wantErr:     true,
+			wantErrKind: apperror.KindUnauthorized,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := comparePasswords(tt.args.hashedPassword, tt.args.plainPassword); (err != nil) != tt.wantErr {
+				t.Errorf("comparePasswords() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_validateLogin(t *testing.T) {
+	type args struct {
+		loginDTO requests.LoginRequest
+	}
+	tests := []struct {
+		name        string
+		args        args
+		wantErr     bool
+		wantErrKind apperror.Kind
+	}{
+		{
+			name: "valid login request",
+			args: args{
+				loginDTO: requests.LoginRequest{
+					Username: "username",
+					Password: "validpassword",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid login request",
+			args: args{
+				loginDTO: requests.LoginRequest{
+					Username: "username",
+					Password: "p",
+				},
+			},
+			wantErr:     true,
+			wantErrKind: apperror.KindUnauthorized,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := validateLogin(tt.args.loginDTO); (err != nil) != tt.wantErr {
+				t.Errorf("validateLogin() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestGenerateToken(t *testing.T) {
+	userID := "user-123"
+
+	expiresAt, tokenStr, err := generateToken(envJwtKey, userID)
+	require.NoError(t, err)
+	require.NotEmpty(t, tokenStr)
+
+	assert.WithinDuration(t, time.Now().Add(24*time.Hour), expiresAt, 2*time.Second)
+
+	parsed, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		return envJwtKey, nil
+	})
+	require.NoError(t, err)
+	require.True(t, parsed.Valid)
+
+	claims, ok := parsed.Claims.(jwt.MapClaims)
+	require.True(t, ok)
+
+	assert.Equal(t, userID, claims["sub"])
+
+	expClaim, ok := claims["exp"].(float64)
+	require.True(t, ok)
+	assert.InDelta(t, float64(expiresAt.Unix()), expClaim, 2)
+}
+
+func TestGenerateToken_FailsWithWrongKey(t *testing.T) {
+	wrongKey := []byte("not-the-real-key")
+	_, tokenStr, err := generateToken(wrongKey, "user-123")
+	require.NoError(t, err)
+
+	_, err = jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		return envJwtKey, nil
+	})
+	assert.Error(t, err)
+}
+
+func TestUserService_Login(t *testing.T) {
+	s := server.NewAppServer()
+	userRepo := *s.GetUserRepository()
+	hashedPassword, _ := hashPassword("validPassword")
+	newUser := user.CreateUser("username", hashedPassword, "email@email.com", time.Now())
+	_ = userRepo.Save(context.Background(), newUser)
+	type fields struct {
+		userRepository user.UserRepository
+	}
+	type args struct {
+		ctx      context.Context
+		loginDTO requests.LoginRequest
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "login successfully",
+			fields: fields{
+				*s.GetUserRepository(),
+			},
+			args: args{
+				context.Background(),
+				requests.LoginRequest{
+					Username: "username",
+					Password: "validPassword",
+				},
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "login successfully",
+			fields: fields{
+				*s.GetUserRepository(),
+			},
+			args: args{
+				context.Background(),
+				requests.LoginRequest{
+					Username: "username",
+					Password: "invalidPassword",
+				},
+			},
+			wantErr: assert.Error,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := &UserService{
+				userRepository: tt.fields.userRepository,
+			}
+			gotUser, gotTime, gotToken, err := service.Login(tt.args.ctx, tt.args.loginDTO)
+			if !tt.wantErr(t, err, fmt.Sprintf("Login(%v, %v)", tt.args.ctx, tt.args.loginDTO)) {
+				assert.NotNil(t, gotUser, "Login(%v, %v)", tt.args.ctx, tt.args.loginDTO)
+				assert.NotNil(t, gotTime, "Login(%v, %v)", tt.args.ctx, tt.args.loginDTO)
+				assert.NotNil(t, gotToken, "Login(%v, %v)", tt.args.ctx, tt.args.loginDTO)
+				return
 			}
 		})
 	}
