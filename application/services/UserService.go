@@ -98,14 +98,14 @@ type LoginResult struct {
 	User        user.User
 }
 
-func (userService *UserService) Login(ctx context.Context, loginDTO requests.LoginRequest) (*LoginResult, error) {
+func (service *UserService) Login(ctx context.Context, loginDTO requests.LoginRequest) (*LoginResult, error) {
 	err := validateLogin(loginDTO)
 	if err != nil {
 		slog.Error("error validating login", "err", err.Error())
 		return nil, err
 	}
 
-	u, err := userService.userRepository.GetByUsername(ctx, loginDTO.Username)
+	u, err := service.userRepository.GetByUsername(ctx, loginDTO.Username)
 	if err != nil {
 		return nil, apperror.Unauthorized("invalid credentials", err)
 	}
@@ -115,7 +115,7 @@ func (userService *UserService) Login(ctx context.Context, loginDTO requests.Log
 		return nil, apperror.Unauthorized("invalid credentials", err)
 	}
 
-	token, expiresAt, err := userService.tokenGenerator.Generate(u.Username())
+	token, expiresAt, err := service.tokenGenerator.Generate(u.Username())
 	if err != nil {
 		return nil, apperror.Internal(err)
 	}
