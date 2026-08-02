@@ -11,16 +11,17 @@ import (
 )
 
 type UserController struct {
-	userService *services.UserService
+	userService    *services.UserService
+	authMiddleware *interfaces.AuthMiddleware
 }
 
-func NewUserController(userService *services.UserService) *UserController {
-	return &UserController{userService}
+func NewUserController(userService *services.UserService, authMiddleware *interfaces.AuthMiddleware) *UserController {
+	return &UserController{userService, authMiddleware}
 }
 
 func (controller *UserController) AddUserHandlersToMux(mux *http.ServeMux) {
 	mux.HandleFunc("POST /user", controller.addUser)
-	mux.HandleFunc("GET /user/{username}", controller.getUser)
+	mux.HandleFunc("GET /user/{username}", controller.authMiddleware.Authenticate(controller.getUser))
 	mux.HandleFunc("POST /login", controller.login)
 }
 
@@ -44,7 +45,7 @@ func (controller *UserController) addUser(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request) {
+func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request, userId string) {
 	username := r.PathValue("username")
 
 	u, err := controller.userService.GetUserByUsername(r.Context(), username)
@@ -69,12 +70,12 @@ func (controller *UserController) login(w http.ResponseWriter, r *http.Request) 
 	var loginDTO requests.LoginRequest
 	interfaces.Decode(w, decoder, &loginDTO)
 
-	u, expTime, token, err := controller.userService.Login(r.Context(), loginDTO)
+	result, err := controller.userService.Login(r.Context(), loginDTO)
 	if err != nil {
 		server.WriteError(w, err)
 		return
 	}
 
-	response := responses.NewLoginResponse(token, expTime, u)
+	response := responses.NewLoginResponse(&result.AccessToken, &result.ExpiresAt, &result.User)
 	interfaces.WriteResponse(w, response, http.StatusOK, "application/json")
 }

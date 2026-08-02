@@ -12,13 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAddUser(t *testing.T) {
 	s := server.NewAppServer()
+	tokenService := NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+
 	type args struct {
 		userService *UserService
 		userDTO     requests.UserRequest
@@ -32,7 +32,7 @@ func TestAddUser(t *testing.T) {
 		{
 			name: "add valid user",
 			args: args{
-				userService: NewUserService(*s.GetUserRepository()),
+				userService: NewUserService(*s.GetUserRepository(), tokenService),
 				userDTO: requests.UserRequest{
 					Username: "username",
 					Password: "password1111111",
@@ -44,7 +44,7 @@ func TestAddUser(t *testing.T) {
 		{
 			name: "add user with invalid email",
 			args: args{
-				userService: NewUserService(*s.GetUserRepository()),
+				userService: NewUserService(*s.GetUserRepository(), tokenService),
 				userDTO: requests.UserRequest{
 					Username: "username",
 					Password: "password1111111",
@@ -78,6 +78,8 @@ func TestAddUser(t *testing.T) {
 
 func TestGetUserByUsername(t *testing.T) {
 	s := server.NewAppServer()
+	tokenService := NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+
 	uDTO := requests.UserRequest{
 		Username: "username",
 		Password: "password1111111",
@@ -97,7 +99,7 @@ func TestGetUserByUsername(t *testing.T) {
 		{
 			name: "get added user by username",
 			args: args{
-				userService: NewUserService(*s.GetUserRepository()),
+				userService: NewUserService(*s.GetUserRepository(), tokenService),
 				username:    "username",
 			},
 			wantErr: false,
@@ -105,7 +107,7 @@ func TestGetUserByUsername(t *testing.T) {
 		{
 			name: "get non-added user by username",
 			args: args{
-				userService: NewUserService(*s.GetUserRepository()),
+				userService: NewUserService(*s.GetUserRepository(), tokenService),
 				username:    "fake-username",
 			},
 			wantErr: true,
@@ -370,42 +372,6 @@ func Test_validateLogin(t *testing.T) {
 	}
 }
 
-func TestGenerateToken(t *testing.T) {
-	userID := "user-123"
-
-	expiresAt, tokenStr, err := generateToken(envJwtKey, userID)
-	require.NoError(t, err)
-	require.NotEmpty(t, tokenStr)
-
-	assert.WithinDuration(t, time.Now().Add(24*time.Hour), expiresAt, 2*time.Second)
-
-	parsed, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-		return envJwtKey, nil
-	})
-	require.NoError(t, err)
-	require.True(t, parsed.Valid)
-
-	claims, ok := parsed.Claims.(jwt.MapClaims)
-	require.True(t, ok)
-
-	assert.Equal(t, userID, claims["sub"])
-
-	expClaim, ok := claims["exp"].(float64)
-	require.True(t, ok)
-	assert.InDelta(t, float64(expiresAt.Unix()), expClaim, 2)
-}
-
-func TestGenerateToken_FailsWithWrongKey(t *testing.T) {
-	wrongKey := []byte("not-the-real-key")
-	_, tokenStr, err := generateToken(wrongKey, "user-123")
-	require.NoError(t, err)
-
-	_, err = jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-		return envJwtKey, nil
-	})
-	assert.Error(t, err)
-}
-
 func TestUserService_Login(t *testing.T) {
 	s := server.NewAppServer()
 	userRepo := *s.GetUserRepository()
@@ -414,6 +380,7 @@ func TestUserService_Login(t *testing.T) {
 	_ = userRepo.Save(context.Background(), newUser)
 	type fields struct {
 		userRepository user.UserRepository
+		tokenGenerator TokenGenerator
 	}
 	type args struct {
 		ctx      context.Context
@@ -429,6 +396,7 @@ func TestUserService_Login(t *testing.T) {
 			name: "login successfully",
 			fields: fields{
 				*s.GetUserRepository(),
+				NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour),
 			},
 			args: args{
 				context.Background(),
@@ -443,6 +411,7 @@ func TestUserService_Login(t *testing.T) {
 			name: "login successfully",
 			fields: fields{
 				*s.GetUserRepository(),
+				NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour),
 			},
 			args: args{
 				context.Background(),
@@ -458,12 +427,13 @@ func TestUserService_Login(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			service := &UserService{
 				userRepository: tt.fields.userRepository,
+				tokenGenerator: tt.fields.tokenGenerator,
 			}
-			gotUser, gotTime, gotToken, err := service.Login(tt.args.ctx, tt.args.loginDTO)
+			loginResult, err := service.Login(tt.args.ctx, tt.args.loginDTO)
 			if !tt.wantErr(t, err, fmt.Sprintf("Login(%v, %v)", tt.args.ctx, tt.args.loginDTO)) {
-				assert.NotNil(t, gotUser, "Login(%v, %v)", tt.args.ctx, tt.args.loginDTO)
-				assert.NotNil(t, gotTime, "Login(%v, %v)", tt.args.ctx, tt.args.loginDTO)
-				assert.NotNil(t, gotToken, "Login(%v, %v)", tt.args.ctx, tt.args.loginDTO)
+				assert.NotNil(t, loginResult.User, "Login(%v, %v)", tt.args.ctx, tt.args.loginDTO)
+				assert.NotNil(t, loginResult.ExpiresAt, "Login(%v, %v)", tt.args.ctx, tt.args.loginDTO)
+				assert.NotNil(t, loginResult.AccessToken, "Login(%v, %v)", tt.args.ctx, tt.args.loginDTO)
 				return
 			}
 		})
