@@ -6,23 +6,20 @@ import (
 	"GarageSaleAPI/interfaces/requests"
 	"context"
 	"log/slog"
-	"os"
 	"time"
 	"unsafe"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var envJwtKey = []byte(os.Getenv("JWT_SECRET"))
-
 type UserService struct {
 	userRepository user.UserRepository
+	tokenGenerator TokenGenerator
 }
 
-func NewUserService(userRepository user.UserRepository) *UserService {
-	return &UserService{userRepository: userRepository}
+func NewUserService(userRepository user.UserRepository, generator TokenGenerator) *UserService {
+	return &UserService{userRepository: userRepository, tokenGenerator: generator}
 }
 
 func validateUser(userDTO requests.UserRequest) error {
@@ -95,41 +92,37 @@ func validateLogin(loginDTO requests.LoginRequest) error {
 	return nil
 }
 
-func generateToken(jwtKey []byte, userID string) (time.Time, string, error) {
-	expTime := time.Now().Add(24 * time.Hour)
-	claims := jwt.MapClaims{
-		"sub": userID,
-		"exp": expTime.Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signedToken, err := token.SignedString(jwtKey)
-	return expTime, signedToken, err
+type LoginResult struct {
+	AccessToken string
+	ExpiresAt   time.Time
+	User        user.User
 }
 
-func (service *UserService) Login(ctx context.Context, loginDTO requests.LoginRequest) (*user.User, *time.Time, *string, error) {
+func (service *UserService) Login(ctx context.Context, loginDTO requests.LoginRequest) (*LoginResult, error) {
 	err := validateLogin(loginDTO)
 	if err != nil {
 		slog.Error("error validating login", "err", err.Error())
-		return nil, nil, nil, err
+		return nil, err
 	}
 
-	u, err := service.GetUserByUsername(ctx, loginDTO.Username)
+	u, err := service.userRepository.GetByUsername(ctx, loginDTO.Username)
 	if err != nil {
-		slog.Error("login error", "username", loginDTO.Username, "err", err.Error())
-		return nil, nil, nil, apperror.Unauthorized("invalid credentials", err)
+		return nil, apperror.Unauthorized("invalid credentials", err)
 	}
 
 	err = comparePasswords(u.Password(), loginDTO.Password)
 	if err != nil {
-		slog.Error("login error", "err", err.Error())
-		return nil, nil, nil, err
+		return nil, apperror.Unauthorized("invalid credentials", err)
 	}
 
-	expTime, token, err := generateToken(envJwtKey, u.Username())
+	token, expiresAt, err := service.tokenGenerator.Generate(u.Username())
 	if err != nil {
-		slog.Error("error generating token", "err", err.Error())
-		return nil, nil, nil, apperror.Internal(err)
+		return nil, apperror.Internal(err)
 	}
 
-	return u, &expTime, &token, nil
+	return &LoginResult{
+		AccessToken: token,
+		ExpiresAt:   expiresAt,
+		User:        *u,
+	}, nil
 }

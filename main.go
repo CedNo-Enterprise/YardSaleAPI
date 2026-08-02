@@ -3,8 +3,11 @@ package main
 import (
 	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
+	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/interfaces/controllers"
 	"net/http"
+	"os"
+	"time"
 )
 
 func main() {
@@ -21,8 +24,14 @@ func main() {
 func initAppState(mux *http.ServeMux) {
 	s := server.NewAppServer()
 
-	userService := services.NewUserService(*s.GetUserRepository())
-	userController := controllers.NewUserController(userService)
+	jwtKey := []byte(os.Getenv("JWT_SECRET"))
+
+	tokenService := services.NewTokenService(jwtKey, 24*time.Hour)
+
+	authMiddleware := interfaces.NewAuthenticationMiddleware(tokenService)
+
+	userService := services.NewUserService(*s.GetUserRepository(), tokenService)
+	userController := controllers.NewUserController(userService, authMiddleware)
 	userController.AddUserHandlersToMux(mux)
 
 	saleService := services.NewSaleService(*s.GetSaleRepository())

@@ -4,6 +4,7 @@ import (
 	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
 	"GarageSaleAPI/domain/user"
+	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/test"
 	"bytes"
 	"fmt"
@@ -20,7 +21,8 @@ func Test_addUser(t *testing.T) {
 	}
 
 	s := server.NewAppServer()
-	controller := *NewUserController(services.NewUserService(*s.GetUserRepository()))
+	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+	controller := *NewUserController(services.NewUserService(*s.GetUserRepository(), tokenService), interfaces.NewAuthenticationMiddleware(tokenService))
 
 	tests := []struct {
 		name       string
@@ -98,9 +100,11 @@ func Test_addUser(t *testing.T) {
 func Test_getUser(t *testing.T) {
 	ctx := test.CreateTestContext(t)
 	s := server.NewAppServer()
+	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+	authMiddleware := interfaces.NewAuthenticationMiddleware(tokenService)
 	userRepo := *s.GetUserRepository()
-	service := services.NewUserService(userRepo)
-	controller := *NewUserController(service)
+	service := services.NewUserService(userRepo, tokenService)
+	controller := *NewUserController(service, authMiddleware)
 	creationTime := time.Now()
 	userToAdd := user.CreateUser("Edgouille", "MDP!@#111111111", "email@email.com", creationTime)
 
@@ -110,8 +114,9 @@ func Test_getUser(t *testing.T) {
 	}
 
 	type args struct {
-		w *httptest.ResponseRecorder
-		r *http.Request
+		w      *httptest.ResponseRecorder
+		r      *http.Request
+		userId string
 	}
 	tests := []struct {
 		name           string
@@ -122,8 +127,9 @@ func Test_getUser(t *testing.T) {
 		{
 			name: "Get user",
 			args: args{
-				w: httptest.NewRecorder(),
-				r: test.CreateRequestWithPathParam(http.MethodGet, "/user/", nil, "username", "Edgouille"),
+				w:      httptest.NewRecorder(),
+				r:      test.CreateRequestWithPathParam(http.MethodGet, "/user/", nil, "username", "Edgouille"),
+				userId: "Edgouille",
 			},
 			wantStatusCode: http.StatusOK,
 			wantBody:       fmt.Sprintf(`{"username":"Edgouille","email":"email@email.com","created_at":"%v","updated_at":"%v"}`+"\n", creationTime.Format(time.RFC3339Nano), creationTime.Format(time.RFC3339Nano)),
@@ -131,8 +137,9 @@ func Test_getUser(t *testing.T) {
 		{
 			name: "Get nonexistent user",
 			args: args{
-				w: httptest.NewRecorder(),
-				r: httptest.NewRequest(http.MethodGet, "/user/10001", nil),
+				w:      httptest.NewRecorder(),
+				r:      httptest.NewRequest(http.MethodGet, "/user/10001", nil),
+				userId: "nonexistent",
 			},
 			wantStatusCode: http.StatusNotFound,
 			wantBody:       "user not found\n",
@@ -144,7 +151,7 @@ func Test_getUser(t *testing.T) {
 				s = server.NewAppServer()
 			})
 
-			controller.getUser(tt.args.w, tt.args.r)
+			controller.getUser(tt.args.w, tt.args.r, tt.args.userId)
 			if tt.wantStatusCode != tt.args.w.Code {
 				t.Errorf("getUser() got status code = %v, want = %v", tt.args.w.Code, tt.wantStatusCode)
 			}
@@ -158,9 +165,11 @@ func Test_getUser(t *testing.T) {
 func TestUserController_login(t *testing.T) {
 	ctx := test.CreateTestContext(t)
 	s := server.NewAppServer()
+	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+	authMiddleware := interfaces.NewAuthenticationMiddleware(tokenService)
 	userRepo := *s.GetUserRepository()
-	service := services.NewUserService(userRepo)
-	controller := *NewUserController(service)
+	service := services.NewUserService(userRepo, tokenService)
+	controller := *NewUserController(service, authMiddleware)
 	creationTime := time.Now()
 	userToAdd := user.CreateUser(
 		"Edgouille",
