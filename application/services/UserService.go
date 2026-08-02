@@ -111,7 +111,7 @@ func (userService *UserService) Login(ctx context.Context, loginDTO requests.Log
 
 	token, expiresAt, err := userService.tokenGenerator.Generate(u.Username())
 	if err != nil {
-		return nil, err
+		return nil, apperror.Internal(err)
 	}
 
 	return &LoginResult{

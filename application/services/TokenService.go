@@ -1,6 +1,7 @@
 package services
 
 import (
+	"GarageSaleAPI/application/server/apperror"
 	"fmt"
 	"time"
 
@@ -43,7 +44,7 @@ func (s *TokenService) Verify(tokenStr string) (jwt.MapClaims, error) {
 		return s.key, nil
 	})
 	if err != nil || !parsed.Valid {
-		return nil, fmt.Errorf("invalid token: %w", err)
+		return nil, apperror.Unauthorized("invalid token: ", err)
 	}
 	return parsed.Claims.(jwt.MapClaims), nil
 }
