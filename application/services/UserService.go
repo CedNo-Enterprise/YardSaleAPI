@@ -99,12 +99,18 @@ type LoginResult struct {
 }
 
 func (userService *UserService) Login(ctx context.Context, loginDTO requests.LoginRequest) (*LoginResult, error) {
+	err := validateLogin(loginDTO)
+	if err != nil {
+		slog.Error("error validating login", "err", err.Error())
+		return nil, err
+	}
+
 	u, err := userService.userRepository.GetByUsername(ctx, loginDTO.Username)
 	if err != nil {
 		return nil, apperror.Unauthorized("invalid credentials", err)
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(u.Password()), []byte(loginDTO.Password))
+	err = comparePasswords(u.Password(), loginDTO.Password)
 	if err != nil {
 		return nil, apperror.Unauthorized("invalid credentials", err)
 	}
