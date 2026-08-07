@@ -5,6 +5,7 @@ import (
 	"GarageSaleAPI/application/services"
 	"GarageSaleAPI/domain/seller"
 	"GarageSaleAPI/domain/user"
+	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/test"
 	"bytes"
 	"context"
@@ -17,17 +18,19 @@ import (
 func TestSellerController_addSeller(t *testing.T) {
 	s := server.NewAppServer()
 	userRepo := *s.GetUserRepository()
+	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
 	sellerService := services.NewSellerService(*s.GetSellerRepository(), userRepo)
 	_ = userRepo.Save(
 		context.Background(),
 		user.CreateUser("username", "password", "email@email.com", time.Now()),
 	)
 
-	controller := NewSellerController(sellerService)
+	controller := NewSellerController(sellerService, interfaces.NewAuthenticationMiddleware(tokenService))
 
 	type args struct {
-		w *httptest.ResponseRecorder
-		r *http.Request
+		w      *httptest.ResponseRecorder
+		r      *http.Request
+		userId string
 	}
 	tests := []struct {
 		name           string
@@ -45,6 +48,7 @@ func TestSellerController_addSeller(t *testing.T) {
 						"username":        "username"
 					}`),
 					"application/json"),
+				userId: "Edgouille",
 			},
 			wantStatusCode: http.StatusCreated,
 		},
@@ -59,6 +63,7 @@ func TestSellerController_addSeller(t *testing.T) {
 						"username":        "invalid_username"
 					}`),
 					"application/json"),
+				userId: "Edgouille",
 			},
 			wantStatusCode: http.StatusBadRequest,
 		},
@@ -69,7 +74,7 @@ func TestSellerController_addSeller(t *testing.T) {
 		})
 
 		t.Run(tt.name, func(t *testing.T) {
-			controller.addSeller(tt.args.w, tt.args.r)
+			controller.addSeller(tt.args.w, tt.args.r, tt.args.userId)
 
 			if tt.wantStatusCode != tt.args.w.Code {
 				t.Errorf("addSeller() got status code = %v, want = %v", tt.args.w.Code, tt.wantStatusCode)

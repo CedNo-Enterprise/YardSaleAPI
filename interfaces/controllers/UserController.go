@@ -11,17 +11,16 @@ import (
 )
 
 type UserController struct {
-	userService    *services.UserService
-	authMiddleware *interfaces.AuthMiddleware
+	userService *services.UserService
 }
 
-func NewUserController(userService *services.UserService, authMiddleware *interfaces.AuthMiddleware) *UserController {
-	return &UserController{userService, authMiddleware}
+func NewUserController(userService *services.UserService) *UserController {
+	return &UserController{userService}
 }
 
 func (controller *UserController) AddUserHandlersToMux(mux *http.ServeMux) {
 	mux.HandleFunc("POST /user", controller.addUser)
-	mux.HandleFunc("GET /user/{username}", controller.authMiddleware.Authenticate(controller.getUser))
+	mux.HandleFunc("GET /user/{username}", controller.getUser)
 	mux.HandleFunc("POST /login", controller.login)
 }
 
@@ -45,7 +44,7 @@ func (controller *UserController) addUser(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request, userId string) {
+func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request) {
 	username := r.PathValue("username")
 
 	u, err := controller.userService.GetUserByUsername(r.Context(), username)

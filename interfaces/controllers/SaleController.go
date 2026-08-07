@@ -11,19 +11,20 @@ import (
 )
 
 type SaleController struct {
-	saleService *services.SaleService
+	saleService    *services.SaleService
+	authMiddleware *interfaces.AuthMiddleware
 }
 
-func NewSaleController(saleService *services.SaleService) *SaleController {
-	return &SaleController{saleService}
+func NewSaleController(saleService *services.SaleService, authMiddleware *interfaces.AuthMiddleware) *SaleController {
+	return &SaleController{saleService, authMiddleware}
 }
 
 func (controller *SaleController) AddSalesHandlersToMux(mux *http.ServeMux) {
-	mux.HandleFunc("POST /sale", controller.addSale)
+	mux.HandleFunc("POST /sale", controller.authMiddleware.Authenticate(controller.addSale))
 	mux.HandleFunc("GET /sale/{id}", controller.getSale)
 }
 
-func (controller *SaleController) addSale(w http.ResponseWriter, r *http.Request) {
+func (controller *SaleController) addSale(w http.ResponseWriter, r *http.Request, userId string) {
 	interfaces.ValidateContentType(w, r, "application/json")
 
 	requestBody := http.MaxBytesReader(w, r.Body, 1048576)
