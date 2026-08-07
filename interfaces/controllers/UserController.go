@@ -44,7 +44,6 @@ func (controller *UserController) addUser(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusCreated)
 }
 
-// TODO: Unprotect route
 func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request) {
 	username := r.PathValue("username")
 
