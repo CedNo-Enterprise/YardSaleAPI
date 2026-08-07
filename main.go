@@ -31,14 +31,14 @@ func initAppState(mux *http.ServeMux) {
 	authMiddleware := interfaces.NewAuthenticationMiddleware(tokenService)
 
 	userService := services.NewUserService(*s.GetUserRepository(), tokenService)
-	userController := controllers.NewUserController(userService, authMiddleware)
+	userController := controllers.NewUserController(userService)
 	userController.AddUserHandlersToMux(mux)
 
 	saleService := services.NewSaleService(*s.GetSaleRepository())
-	saleController := controllers.NewSaleController(saleService)
+	saleController := controllers.NewSaleController(saleService, authMiddleware)
 	saleController.AddSalesHandlersToMux(mux)
 
 	sellerService := services.NewSellerService(*s.GetSellerRepository(), *s.GetUserRepository())
-	sellerController := controllers.NewSellerController(sellerService)
+	sellerController := controllers.NewSellerController(sellerService, authMiddleware)
 	sellerController.AddSalesHandlersToMux(mux)
 }

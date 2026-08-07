@@ -3,6 +3,7 @@ package controllers
 import (
 	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
+	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/test"
 	"bytes"
@@ -16,11 +17,13 @@ import (
 
 func TestSaleController_addSale(t *testing.T) {
 	s := server.NewAppServer()
-	controller := *NewSaleController(services.NewSaleService(*s.GetSaleRepository()))
+	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+	controller := *NewSaleController(services.NewSaleService(*s.GetSaleRepository()), interfaces.NewAuthenticationMiddleware(tokenService))
 
 	type args struct {
-		w *httptest.ResponseRecorder
-		r *http.Request
+		w      *httptest.ResponseRecorder
+		r      *http.Request
+		userId string
 	}
 	tests := []struct {
 		name           string
@@ -28,7 +31,7 @@ func TestSaleController_addSale(t *testing.T) {
 		wantStatusCode int
 	}{
 		{
-			name: "Add valid user",
+			name: "Add valid sale",
 			args: args{
 				w: httptest.NewRecorder(),
 				r: test.CreateRequest(
@@ -45,7 +48,7 @@ func TestSaleController_addSale(t *testing.T) {
 			wantStatusCode: http.StatusCreated,
 		},
 		{
-			name: "Add valid user",
+			name: "Add valid sale",
 			args: args{
 				w: httptest.NewRecorder(),
 				r: test.CreateRequest(
@@ -56,11 +59,12 @@ func TestSaleController_addSale(t *testing.T) {
     					"Address": "123 st road"
 					}`),
 					""),
+				userId: "Edgouille",
 			},
 			wantStatusCode: http.StatusUnsupportedMediaType,
 		},
 		{
-			name: "Add invalid user",
+			name: "Add invalid sale",
 			args: args{
 				w: httptest.NewRecorder(),
 				r: test.CreateRequest(
@@ -71,6 +75,7 @@ func TestSaleController_addSale(t *testing.T) {
     					"Address": "123 st road"
 					}`),
 					"application/json"),
+				userId: "Edgouille",
 			},
 			wantStatusCode: http.StatusBadRequest,
 		},
@@ -81,7 +86,7 @@ func TestSaleController_addSale(t *testing.T) {
 		})
 
 		t.Run(tt.name, func(t *testing.T) {
-			controller.addSale(tt.args.w, tt.args.r)
+			controller.addSale(tt.args.w, tt.args.r, tt.args.userId)
 
 			if tt.wantStatusCode != tt.args.w.Code {
 				t.Errorf("addSale() got status code = %v, want = %v", tt.args.w.Code, tt.wantStatusCode)
@@ -92,8 +97,9 @@ func TestSaleController_addSale(t *testing.T) {
 
 func TestSaleController_getSale(t *testing.T) {
 	s := server.NewAppServer()
+	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
 	service := services.NewSaleService(*s.GetSaleRepository())
-	controller := *NewSaleController(service)
+	controller := *NewSaleController(service, interfaces.NewAuthenticationMiddleware(tokenService))
 
 	saleToAdd := requests.SaleRequest{
 		SellerId: uuid.NewString(),

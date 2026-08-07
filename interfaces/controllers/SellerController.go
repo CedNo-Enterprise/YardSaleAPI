@@ -11,22 +11,21 @@ import (
 )
 
 type SellerController struct {
-	sellerService *services.SellerService
+	sellerService  *services.SellerService
+	authMiddleware *interfaces.AuthMiddleware
 }
 
-func NewSellerController(sellerService *services.SellerService) *SellerController {
-	return &SellerController{
-		sellerService: sellerService,
-	}
+func NewSellerController(sellerService *services.SellerService, authMiddleware *interfaces.AuthMiddleware) *SellerController {
+	return &SellerController{sellerService, authMiddleware}
 }
 
 func (controller *SellerController) AddSalesHandlersToMux(mux *http.ServeMux) {
-	mux.HandleFunc("POST /seller", controller.addSeller)
+	mux.HandleFunc("POST /seller", controller.authMiddleware.Authenticate(controller.addSeller))
 	mux.HandleFunc("GET /seller/user/{username}", controller.getSellerByUsername)
 	mux.HandleFunc("GET /seller/{id}", controller.getSellerById)
 }
 
-func (controller *SellerController) addSeller(w http.ResponseWriter, r *http.Request) {
+func (controller *SellerController) addSeller(w http.ResponseWriter, r *http.Request, userId string) {
 	interfaces.ValidateContentType(w, r, "application/json")
 
 	requestBody := http.MaxBytesReader(w, r.Body, 1048576)
