@@ -20,7 +20,9 @@ CREATE TABLE inventory_items (
     name TEXT,
     description TEXT,
 	price FLOAT NOT NULL,
-	status TEXT DEFAULT 'available'
+    seller_id UUID NOT NULL,
+	status TEXT DEFAULT 'available',
+    CONSTRAINT fk_seller FOREIGN KEY (seller_id) REFERENCES sellers(id)
 );
 
 CREATE TABLE addresses (
