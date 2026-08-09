@@ -5,11 +5,16 @@ import (
 )
 
 type User struct {
+	id        string
 	username  string
 	password  string
 	email     string
 	createdAt time.Time
 	updatedAt time.Time
+}
+
+func (u User) Id() string {
+	return u.id
 }
 
 func (u User) Username() string {

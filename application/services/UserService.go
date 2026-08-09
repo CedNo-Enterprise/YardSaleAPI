@@ -10,6 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -44,7 +45,8 @@ func (service *UserService) AddUser(ctx context.Context, userDTO requests.UserRe
 		return err
 	}
 
-	newUser := user.CreateUser(userDTO.Username, hashedPassword, userDTO.Email, time.Now())
+	userId := uuid.NewString()
+	newUser := user.CreateUser(userId, userDTO.Username, hashedPassword, userDTO.Email, time.Now())
 	err = service.userRepository.Save(ctx, newUser)
 	if err != nil {
 		slog.Error(err.Error())

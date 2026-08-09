@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func TestSellerService_AddSeller(t *testing.T) {
@@ -17,7 +19,7 @@ func TestSellerService_AddSeller(t *testing.T) {
 	userRepo := *s.GetUserRepository()
 	_ = userRepo.Save(
 		test.CreateTestContext(t),
-		user.CreateUser("user", "password", "email@email.com", time.Now()),
+		user.CreateUser(uuid.NewString(), "user", "password", "email@email.com", time.Now()),
 	)
 
 	type fields struct {
@@ -139,7 +141,7 @@ func TestSellerService_GetSellerByUsername(t *testing.T) {
 	userRepo := *s.GetUserRepository()
 	_ = userRepo.Save(
 		test.CreateTestContext(t),
-		user.CreateUser("user", "password", "email@email.com", time.Now()),
+		user.CreateUser(uuid.NewString(), "user", "password", "email@email.com", time.Now()),
 	)
 	sellerRepo := *s.GetSellerRepository()
 	newSeller := seller.CreateSeller("1", "user", time.Now())

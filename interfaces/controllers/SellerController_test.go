@@ -13,6 +13,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func TestSellerController_addSeller(t *testing.T) {
@@ -22,7 +24,7 @@ func TestSellerController_addSeller(t *testing.T) {
 	sellerService := services.NewSellerService(*s.GetSellerRepository(), userRepo)
 	_ = userRepo.Save(
 		context.Background(),
-		user.CreateUser("username", "password", "email@email.com", time.Now()),
+		user.CreateUser(uuid.NewString(), "username", "password", "email@email.com", time.Now()),
 	)
 
 	controller := NewSellerController(sellerService, interfaces.NewAuthenticationMiddleware(tokenService))
@@ -188,7 +190,7 @@ func setupGetSellerTests() *services.SellerService {
 	sellerService := services.NewSellerService(sellerRepo, userRepo)
 	_ = userRepo.Save(
 		context.Background(),
-		user.CreateUser("username", "password", "email@email.com", time.Now()),
+		user.CreateUser(uuid.NewString(), "username", "password", "email@email.com", time.Now()),
 	)
 	addedSeller := seller.CreateSeller("seller_id", "username", time.Now())
 	_ = sellerRepo.Save(context.Background(), addedSeller)
