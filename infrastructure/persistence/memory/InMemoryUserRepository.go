@@ -20,6 +20,11 @@ func (repo *InMemoryUserRepository) Save(ctx context.Context, user user.User) er
 		return apperror.Conflict("user already exists", nil)
 	}
 
+	duplicate, _ = repo.GetByEmail(ctx, user.Email())
+	if duplicate != nil {
+		return apperror.Conflict("user already exists", nil)
+	}
+
 	repo.userList = append(repo.userList, user)
 	return nil
 }
@@ -31,6 +36,19 @@ func (repo *InMemoryUserRepository) GetByUsername(ctx context.Context, username 
 
 	for _, foundUser := range repo.userList {
 		if foundUser.Username() == username {
+			return &foundUser, nil
+		}
+	}
+	return nil, apperror.NotFound("user not found", nil)
+}
+
+func (repo *InMemoryUserRepository) GetByEmail(ctx context.Context, email string) (*user.User, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	for _, foundUser := range repo.userList {
+		if foundUser.Email() == email {
 			return &foundUser, nil
 		}
 	}
