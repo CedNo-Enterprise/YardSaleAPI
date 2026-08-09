@@ -11,6 +11,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func Test_addUser(t *testing.T) {
@@ -104,7 +106,7 @@ func Test_getUser(t *testing.T) {
 	service := services.NewUserService(userRepo, tokenService)
 	controller := *NewUserController(service)
 	creationTime := time.Now()
-	userToAdd := user.CreateUser("Edgouille", "MDP!@#111111111", "email@email.com", creationTime)
+	userToAdd := user.CreateUser(uuid.NewString(), "Edgouille", "MDP!@#111111111", "email@email.com", creationTime)
 
 	e := userRepo.Save(ctx, userToAdd)
 	if e != nil {
@@ -166,6 +168,7 @@ func TestUserController_login(t *testing.T) {
 	controller := *NewUserController(service)
 	creationTime := time.Now()
 	userToAdd := user.CreateUser(
+		uuid.NewString(),
 		"Edgouille",
 		"$2a$14$/IhjU2PxRypamw1kLypfIeB28u32sgVtTL2EvCl8Ar.sUlPk77drO",
 		"email@email.com",

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -376,7 +377,7 @@ func TestUserService_Login(t *testing.T) {
 	s := server.NewAppServer()
 	userRepo := *s.GetUserRepository()
 	hashedPassword, _ := hashPassword("validPassword")
-	newUser := user.CreateUser("username", hashedPassword, "email@email.com", time.Now())
+	newUser := user.CreateUser(uuid.NewString(), "username", hashedPassword, "email@email.com", time.Now())
 	_ = userRepo.Save(context.Background(), newUser)
 	type fields struct {
 		userRepository user.UserRepository

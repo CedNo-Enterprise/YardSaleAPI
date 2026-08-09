@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func TestInMemoryUserRepository_AddUser(t *testing.T) {
@@ -18,7 +20,7 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 		ctx  context.Context
 	}
 
-	validUser := user.CreateUser("username", "password", "email@email.com", time.Now())
+	validUser := user.CreateUser(uuid.NewString(), "username", "password", "email@email.com", time.Now())
 
 	tests := []struct {
 		name       string
@@ -111,7 +113,7 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 		ctx      context.Context
 	}
 
-	validUser := user.CreateUser("username", "password", "email@email.com", time.Now())
+	validUser := user.CreateUser(uuid.NewString(), "username", "password", "email@email.com", time.Now())
 
 	tests := []struct {
 		name    string
