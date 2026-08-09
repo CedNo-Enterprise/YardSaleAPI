@@ -1,1 +1,13 @@
+DROP TABLE IF EXISTS saved_addresses;
+
+DROP TABLE IF EXISTS sale_items;
+
+DROP TABLE IF EXISTS inventory_items;
+
+DROP TABLE IF EXISTS sales;
+
+DROP TABLE IF EXISTS addresses;
+
+DROP TABLE IF EXISTS sellers;
+
 DROP TABLE IF EXISTS users;
