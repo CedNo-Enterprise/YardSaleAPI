@@ -85,7 +85,7 @@ func TestInMemorySellerRepository_Save(t *testing.T) {
 				sellerList: tt.fields.sellerList,
 			}
 
-			err := repo.Save(tt.args.ctx, tt.args.seller)
+			err := repo.Create(tt.args.ctx, tt.args.seller)
 			if (err != nil) != tt.wantErr ||
 				((err != nil) && err.Error() != tt.wantErrText) {
 				t.Errorf("Save() error = %v, wantErr %v", err, tt.wantErr)

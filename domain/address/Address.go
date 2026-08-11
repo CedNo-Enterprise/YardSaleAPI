@@ -1,6 +1,7 @@
 package address
 
 type Address struct {
+	id         int64
 	line1      string
 	line2      *string
 	city       string
@@ -11,12 +12,16 @@ type Address struct {
 	longitude  float64
 }
 
+func (a *Address) Id() int64 {
+	return a.id
+}
+
 func (a *Address) Line1() string {
 	return a.line1
 }
 
-func (a *Address) Line2() string {
-	return *a.line2
+func (a *Address) Line2() *string {
+	return a.line2
 }
 
 func (a *Address) City() string {

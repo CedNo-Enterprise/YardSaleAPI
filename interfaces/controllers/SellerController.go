@@ -47,9 +47,9 @@ func (controller *SellerController) addSeller(w http.ResponseWriter, r *http.Req
 }
 
 func (controller *SellerController) getSellerByUsername(w http.ResponseWriter, r *http.Request) {
-	username := r.PathValue("username")
+	userId := r.PathValue("userId")
 
-	s, err := controller.sellerService.GetSellerByUsername(r.Context(), username)
+	s, err := controller.sellerService.GetSellerByUserId(r.Context(), userId)
 	if err != nil {
 		server.WriteError(w, err)
 		return

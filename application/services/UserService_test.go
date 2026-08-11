@@ -378,7 +378,7 @@ func TestUserService_Login(t *testing.T) {
 	userRepo := *s.GetUserRepository()
 	hashedPassword, _ := hashPassword("validPassword")
 	newUser := user.CreateUser(uuid.NewString(), "username", hashedPassword, "email@email.com", time.Now())
-	_ = userRepo.Save(context.Background(), newUser)
+	_ = userRepo.Create(context.Background(), newUser)
 	type fields struct {
 		userRepository user.UserRepository
 		tokenGenerator TokenGenerator

@@ -6,20 +6,20 @@ import (
 
 type SellerResponse struct {
 	Id             string                  `json:"id"`
-	Username       string                  `json:"username"`
+	Name           string                  `json:"name"`
 	SavedAddresses []SavedAddressResponse  `json:"saved_addresses"`
 	Inventory      []InventoryItemResponse `json:"inventory"`
 }
 
 type SavedAddressResponse struct {
-	Id        string          `json:"id"`
+	Id        int64           `json:"id"`
 	Label     string          `json:"label"`
 	Address   AddressResponse `json:"address"`
 	IsDefault bool            `json:"is_default"`
 }
 
 type InventoryItemResponse struct {
-	Id          string            `json:"id"`
+	Id          int64             `json:"id"`
 	Name        string            `json:"name"`
 	Description string            `json:"description"`
 	Price       float64           `json:"price"`
@@ -29,7 +29,7 @@ type InventoryItemResponse struct {
 func NewSellerResponse(s *seller.Seller) SellerResponse {
 	return SellerResponse{
 		Id:             s.Id(),
-		Username:       s.Username(),
+		Name:           s.Name(),
 		SavedAddresses: newSavedAddressResponses(s.SavedAddresses()),
 		Inventory:      newInventoryItemResponses(s.Inventory()),
 	}

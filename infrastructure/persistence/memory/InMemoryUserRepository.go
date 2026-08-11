@@ -10,7 +10,7 @@ type InMemoryUserRepository struct {
 	userList []user.User
 }
 
-func (repo *InMemoryUserRepository) Save(ctx context.Context, user user.User) error {
+func (repo *InMemoryUserRepository) Create(ctx context.Context, user *user.User) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func (repo *InMemoryUserRepository) Save(ctx context.Context, user user.User) er
 		return apperror.Conflict("user already exists", nil)
 	}
 
-	repo.userList = append(repo.userList, user)
+	repo.userList = append(repo.userList, *user)
 	return nil
 }
 
@@ -49,6 +49,20 @@ func (repo *InMemoryUserRepository) GetByEmail(ctx context.Context, email string
 
 	for _, foundUser := range repo.userList {
 		if foundUser.Email() == email {
+			return &foundUser, nil
+		}
+	}
+	return nil, apperror.NotFound("user not found", nil)
+}
+
+// todo: add tests
+func (repo *InMemoryUserRepository) GetById(ctx context.Context, id string) (*user.User, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	for _, foundUser := range repo.userList {
+		if foundUser.Id() == id {
 			return &foundUser, nil
 		}
 	}

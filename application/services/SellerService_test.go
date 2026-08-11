@@ -17,7 +17,7 @@ import (
 func TestSellerService_AddSeller(t *testing.T) {
 	s := server.NewAppServer()
 	userRepo := *s.GetUserRepository()
-	_ = userRepo.Save(
+	_ = userRepo.Create(
 		test.CreateTestContext(t),
 		user.CreateUser(uuid.NewString(), "user", "password", "email@email.com", time.Now()),
 	)
@@ -120,7 +120,7 @@ func TestSellerService_GetSellerById(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_ = sellerRepo.Save(tt.args.ctx, newSeller)
+			_ = sellerRepo.Create(tt.args.ctx, newSeller)
 			service := &SellerService{sellerRepository: sellerRepo}
 
 			got, err := service.GetSellerById(tt.args.ctx, tt.args.sellerId)
@@ -139,7 +139,7 @@ func TestSellerService_GetSellerById(t *testing.T) {
 func TestSellerService_GetSellerByUsername(t *testing.T) {
 	s := server.NewAppServer()
 	userRepo := *s.GetUserRepository()
-	_ = userRepo.Save(
+	_ = userRepo.Create(
 		test.CreateTestContext(t),
 		user.CreateUser(uuid.NewString(), "user", "password", "email@email.com", time.Now()),
 	)
@@ -177,7 +177,7 @@ func TestSellerService_GetSellerByUsername(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_ = sellerRepo.Save(tt.args.ctx, newSeller)
+			_ = sellerRepo.Create(tt.args.ctx, newSeller)
 			service := &SellerService{sellerRepository: sellerRepo}
 
 			got, err := service.GetSellerByUsername(tt.args.ctx, tt.args.username)

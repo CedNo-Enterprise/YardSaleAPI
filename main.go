@@ -3,11 +3,16 @@ package main
 import (
 	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
+	"GarageSaleAPI/infrastructure/persistence/database"
 	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/interfaces/controllers"
+	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/joho/godotenv"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -22,7 +27,9 @@ func main() {
 }
 
 func initAppState(mux *http.ServeMux) {
-	s := server.NewAppServer()
+	loadEnv()
+	db := setupDatabase()
+	s := server.NewAppServer(db)
 
 	jwtKey := []byte(os.Getenv("JWT_SECRET"))
 
@@ -41,4 +48,23 @@ func initAppState(mux *http.ServeMux) {
 	sellerService := services.NewSellerService(*s.GetSellerRepository(), *s.GetUserRepository())
 	sellerController := controllers.NewSellerController(sellerService, authMiddleware)
 	sellerController.AddSalesHandlersToMux(mux)
+}
+
+func loadEnv() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("no .env file found, relying on real environment variables")
+	}
+}
+
+func setupDatabase() *gorm.DB {
+	gormDB, err := database.NewGormDB()
+	if err != nil {
+		log.Fatalf("failed to connect to database: %v", err)
+	}
+
+	if err = database.AutoMigrate(gormDB); err != nil {
+		log.Fatalf("failed to run migrations: %v", err)
+	}
+
+	return gormDB
 }

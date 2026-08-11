@@ -22,7 +22,7 @@ func TestSellerController_addSeller(t *testing.T) {
 	userRepo := *s.GetUserRepository()
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
 	sellerService := services.NewSellerService(*s.GetSellerRepository(), userRepo)
-	_ = userRepo.Save(
+	_ = userRepo.Create(
 		context.Background(),
 		user.CreateUser(uuid.NewString(), "username", "password", "email@email.com", time.Now()),
 	)
@@ -188,12 +188,12 @@ func setupGetSellerTests() *services.SellerService {
 	userRepo := *s.GetUserRepository()
 	sellerRepo := *s.GetSellerRepository()
 	sellerService := services.NewSellerService(sellerRepo, userRepo)
-	_ = userRepo.Save(
+	_ = userRepo.Create(
 		context.Background(),
 		user.CreateUser(uuid.NewString(), "username", "password", "email@email.com", time.Now()),
 	)
 	addedSeller := seller.CreateSeller("seller_id", "username", time.Now())
-	_ = sellerRepo.Save(context.Background(), addedSeller)
+	_ = sellerRepo.Create(context.Background(), addedSeller)
 
 	return sellerService
 }

@@ -50,7 +50,7 @@ func (service *SaleService) AddSale(ctx context.Context, saleDTO requests.SaleRe
 		saleAddress, saleDTO.Date, saleDTO.Description, time.Now(),
 	)
 
-	err = service.saleRepository.Save(ctx, s)
+	err = service.saleRepository.Create(ctx, s)
 	if err != nil {
 		slog.Error(err.Error())
 		return nil, err

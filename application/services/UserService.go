@@ -47,7 +47,7 @@ func (service *UserService) AddUser(ctx context.Context, userDTO requests.UserRe
 
 	userId := uuid.NewString()
 	newUser := user.CreateUser(userId, userDTO.Username, hashedPassword, userDTO.Email, time.Now())
-	err = service.userRepository.Save(ctx, newUser)
+	err = service.userRepository.Create(ctx, newUser)
 	if err != nil {
 		slog.Error(err.Error())
 		return err
@@ -56,6 +56,7 @@ func (service *UserService) AddUser(ctx context.Context, userDTO requests.UserRe
 	return nil
 }
 
+// todo: username is not really unique (still is in validation), switch to get by Id
 func (service *UserService) GetUserByUsername(ctx context.Context, username string) (*user.User, error) {
 	u, err := service.userRepository.GetByUsername(ctx, username)
 	if err != nil {

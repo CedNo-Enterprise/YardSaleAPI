@@ -4,7 +4,9 @@ import (
 	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/domain/seller"
 	"GarageSaleAPI/domain/user"
-	"GarageSaleAPI/infrastructure/persistence/memory"
+	"GarageSaleAPI/infrastructure/persistence/database"
+
+	"gorm.io/gorm"
 )
 
 type AppServer struct {
@@ -13,11 +15,11 @@ type AppServer struct {
 	sellerRepository seller.SellerRepository
 }
 
-func NewAppServer() *AppServer {
+func NewAppServer(db *gorm.DB) *AppServer {
 	return &AppServer{
-		userRepository:   new(memory.InMemoryUserRepository),
-		saleRepository:   new(memory.InMemorySaleRepository),
-		sellerRepository: new(memory.InMemorySellerRepository),
+		userRepository:   database.NewUserRepository(db),
+		saleRepository:   database.NewSaleRepository(db),
+		sellerRepository: database.NewSellerRepository(db),
 	}
 }
 

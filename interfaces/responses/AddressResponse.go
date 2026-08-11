@@ -18,7 +18,7 @@ type AddressResponse struct {
 func NewAddressResponse(address address.Address) *AddressResponse {
 	return &AddressResponse{
 		Line1:      address.Line1(),
-		Line2:      address.Line2(),
+		Line2:      *address.Line2(),
 		City:       address.City(),
 		State:      address.State(),
 		PostalCode: address.PostalCode(),

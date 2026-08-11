@@ -20,18 +20,18 @@ func NewSellerService(sellerRepo seller.SellerRepository, userRepo user.UserRepo
 	return &SellerService{sellerRepository: sellerRepo, userRepository: userRepo}
 }
 
-func (service *SellerService) AddSeller(ctx context.Context, username string) (*string, error) {
+func (service *SellerService) AddSeller(ctx context.Context, userId string) (*string, error) {
 	sellerId := uuid.NewString()
-	s := seller.CreateSeller(sellerId, username, time.Now())
+	s := seller.CreateSeller(sellerId, userId, time.Now())
 
-	canAdd := service.userExists(ctx, username)
+	canAdd := service.userExists(ctx, userId)
 	if !canAdd {
 		err := apperror.Invalid("invalid username", nil)
 		slog.Error("invalid username", "err", err)
 		return nil, err
 	}
 
-	err := service.sellerRepository.Save(ctx, s)
+	err := service.sellerRepository.Create(ctx, s)
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +49,8 @@ func (service *SellerService) GetSellerById(ctx context.Context, sellerId string
 	return s, nil
 }
 
-func (service *SellerService) GetSellerByUsername(ctx context.Context, username string) (*seller.Seller, error) {
-	s, err := service.sellerRepository.GetByUsername(ctx, username)
+func (service *SellerService) GetSellerByUserId(ctx context.Context, userId string) (*seller.Seller, error) {
+	s, err := service.sellerRepository.GetByUserId(ctx, userId)
 	if err != nil {
 		slog.Error("error getting seller", "err", err.Error())
 		return nil, err
@@ -59,8 +59,8 @@ func (service *SellerService) GetSellerByUsername(ctx context.Context, username 
 	return s, nil
 }
 
-func (service *SellerService) userExists(ctx context.Context, username string) bool {
-	u, err := service.userRepository.GetByUsername(ctx, username)
+func (service *SellerService) userExists(ctx context.Context, userId string) bool {
+	u, err := service.userRepository.GetById(ctx, userId)
 	if err != nil {
 		return false
 	}

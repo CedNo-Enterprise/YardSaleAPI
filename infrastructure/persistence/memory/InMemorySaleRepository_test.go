@@ -98,7 +98,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 				saleList: tt.fields.SaleList,
 			}
 
-			err := repo.Save(tt.args.ctx, tt.args.sale)
+			err := repo.Create(tt.args.ctx, tt.args.sale)
 
 			if (err != nil) != tt.wantErr ||
 				((err != nil) && err.Error() != tt.wantErrText) {

@@ -108,7 +108,7 @@ func Test_getUser(t *testing.T) {
 	creationTime := time.Now()
 	userToAdd := user.CreateUser(uuid.NewString(), "Edgouille", "MDP!@#111111111", "email@email.com", creationTime)
 
-	e := userRepo.Save(ctx, userToAdd)
+	e := userRepo.Create(ctx, userToAdd)
 	if e != nil {
 		t.Fatal(e.Error())
 	}
@@ -174,7 +174,7 @@ func TestUserController_login(t *testing.T) {
 		"email@email.com",
 		creationTime)
 
-	e := userRepo.Save(ctx, userToAdd)
+	e := userRepo.Create(ctx, userToAdd)
 	if e != nil {
 		t.Fatal(e.Error())
 	}

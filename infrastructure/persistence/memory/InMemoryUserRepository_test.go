@@ -90,7 +90,7 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 				userList: tt.fields.UserList,
 			}
 
-			err := repo.Save(tt.args.ctx, tt.args.user)
+			err := repo.Create(tt.args.ctx, tt.args.user)
 			if err != nil && !tt.wantErr ||
 				((err != nil) && err.Error() != tt.textErr) {
 				t.Errorf("InMemoryUserRepository.AddUser() error = %v, wantErr %v\ntext = %v, textErr = %v",

@@ -126,7 +126,7 @@ func TestSaleService_GetSaleById(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := test.CreateTestContext(t)
-			_ = repo.Save(ctx, newSale)
+			_ = repo.Create(ctx, newSale)
 			got, err := tt.args.service.GetSaleById(ctx, tt.args.saleId)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetSaleById() error = %v, wantErr %v", err, tt.wantErr)
