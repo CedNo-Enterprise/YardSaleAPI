@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type TokenGenerator interface {
@@ -26,9 +27,12 @@ func NewTokenService(key []byte, ttl time.Duration) *TokenService {
 }
 
 func (s *TokenService) Generate(userID string) (string, time.Time, error) {
-	expiresAt := time.Now().Add(s.ttl)
+	issuedAt := time.Now()
+	expiresAt := issuedAt.Add(s.ttl)
 	claims := jwt.MapClaims{
 		"sub": userID,
+		"jti": uuid.NewString(),
+		"iat": issuedAt.Unix(),
 		"exp": expiresAt.Unix(),
 	}
 	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

@@ -26,6 +26,7 @@ func NewGormDB() (*gorm.DB, error) {
 func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&records.UserRecord{},
+		&records.RevokedTokenRecord{},
 		&records.SellerRecord{},
 		&records.AddressRecord{},
 		&records.SavedAddressRecord{},

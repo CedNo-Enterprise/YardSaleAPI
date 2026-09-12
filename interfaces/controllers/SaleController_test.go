@@ -18,7 +18,7 @@ import (
 func TestSaleController_addSale(t *testing.T) {
 	repo := &memory.InMemorySaleRepository{}
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
-	controller := *NewSaleController(services.NewSaleService(repo), interfaces.NewAuthenticationMiddleware(tokenService))
+	controller := *NewSaleController(services.NewSaleService(repo), interfaces.NewAuthenticationMiddleware(tokenService, services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})))
 
 	type args struct {
 		w      *httptest.ResponseRecorder
@@ -95,7 +95,7 @@ func TestSaleController_getSale(t *testing.T) {
 	repo := &memory.InMemorySaleRepository{}
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
 	service := services.NewSaleService(repo)
-	controller := *NewSaleController(service, interfaces.NewAuthenticationMiddleware(tokenService))
+	controller := *NewSaleController(service, interfaces.NewAuthenticationMiddleware(tokenService, services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})))
 
 	saleToAdd := requests.SaleRequest{
 		SellerId: uuid.NewString(),

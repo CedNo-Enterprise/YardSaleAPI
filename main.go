@@ -3,10 +3,13 @@ package main
 import (
 	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
+	"GarageSaleAPI/domain/token"
 	"GarageSaleAPI/infrastructure/persistence/database"
 	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/interfaces/controllers"
+	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -35,10 +38,13 @@ func initAppState(mux *http.ServeMux) {
 
 	tokenService := services.NewTokenService(jwtKey, 24*time.Hour)
 
-	authMiddleware := interfaces.NewAuthenticationMiddleware(tokenService)
+	revokedTokens := *s.GetRevokedTokenRepository()
+	sessionService := services.NewSessionService(revokedTokens)
+
+	authMiddleware := interfaces.NewAuthenticationMiddleware(tokenService, sessionService)
 
 	userService := services.NewUserService(*s.GetUserRepository(), tokenService)
-	userController := controllers.NewUserController(userService)
+	userController := controllers.NewUserController(userService, sessionService, authMiddleware)
 	userController.AddUserHandlersToMux(mux)
 
 	saleService := services.NewSaleService(*s.GetSaleRepository())
@@ -48,6 +54,28 @@ func initAppState(mux *http.ServeMux) {
 	sellerService := services.NewSellerService(*s.GetSellerRepository(), *s.GetUserRepository())
 	sellerController := controllers.NewSellerController(sellerService, authMiddleware)
 	sellerController.AddSalesHandlersToMux(mux)
+
+	startRevokedTokenCleanup(revokedTokens, time.Hour)
+}
+
+// startRevokedTokenCleanup periodically drops denylist rows for tokens that
+// have expired on their own, so the table stays bounded by the token TTL.
+func startRevokedTokenCleanup(revokedTokens token.RevokedTokenRepository, every time.Duration) {
+	sweep := func() {
+		if err := revokedTokens.DeleteExpired(context.Background(), time.Now()); err != nil {
+			slog.Error("error cleaning up expired revoked tokens", "err", err.Error())
+		}
+	}
+
+	sweep()
+
+	go func() {
+		ticker := time.NewTicker(every)
+		defer ticker.Stop()
+		for range ticker.C {
+			sweep()
+		}
+	}()
 }
 
 func loadEnv() {

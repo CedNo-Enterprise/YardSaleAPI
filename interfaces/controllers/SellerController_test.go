@@ -27,7 +27,7 @@ func TestSellerController_addSeller(t *testing.T) {
 		user.CreateUser(userId, "username", "password", "email@email.com", time.Now()),
 	)
 
-	controller := NewSellerController(sellerService, interfaces.NewAuthenticationMiddleware(tokenService))
+	controller := NewSellerController(sellerService, interfaces.NewAuthenticationMiddleware(tokenService, services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})))
 
 	type args struct {
 		w      *httptest.ResponseRecorder

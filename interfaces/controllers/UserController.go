@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"GarageSaleAPI/application/server"
+	"GarageSaleAPI/application/server/apperror"
 	"GarageSaleAPI/application/services"
 	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/interfaces/requests"
@@ -11,17 +12,20 @@ import (
 )
 
 type UserController struct {
-	userService *services.UserService
+	userService    *services.UserService
+	sessionService *services.SessionService
+	authMiddleware *interfaces.AuthMiddleware
 }
 
-func NewUserController(userService *services.UserService) *UserController {
-	return &UserController{userService}
+func NewUserController(userService *services.UserService, sessionService *services.SessionService, authMiddleware *interfaces.AuthMiddleware) *UserController {
+	return &UserController{userService, sessionService, authMiddleware}
 }
 
 func (controller *UserController) AddUserHandlersToMux(mux *http.ServeMux) {
 	mux.HandleFunc("POST /user", controller.addUser)
 	mux.HandleFunc("GET /user/{id}", controller.getUser)
 	mux.HandleFunc("POST /login", controller.login)
+	mux.HandleFunc("POST /logout", controller.authMiddleware.Authenticate(controller.logout))
 }
 
 func (controller *UserController) addUser(w http.ResponseWriter, r *http.Request) {
@@ -77,4 +81,19 @@ func (controller *UserController) login(w http.ResponseWriter, r *http.Request) 
 
 	response := responses.NewLoginResponse(&result.AccessToken, &result.ExpiresAt, &result.User)
 	interfaces.WriteResponse(w, response, http.StatusOK, "application/json")
+}
+
+func (controller *UserController) logout(w http.ResponseWriter, r *http.Request, _ string) {
+	claims, ok := interfaces.ClaimsFrom(r.Context())
+	if !ok {
+		server.WriteError(w, apperror.Unauthorized("invalid token claims", nil))
+		return
+	}
+
+	if err := controller.sessionService.Logout(r.Context(), claims); err != nil {
+		server.WriteError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

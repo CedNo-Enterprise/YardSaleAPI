@@ -128,3 +128,41 @@ func TestTokenService_Generate_ProducesThreePartJWT(t *testing.T) {
 	parts := strings.Split(tokenStr, ".")
 	assert.Len(t, parts, 3, "JWT should have header.payload.signature")
 }
+
+func TestTokenService_Generate_IncludesUniqueJti(t *testing.T) {
+	svc := NewTokenService([]byte("test-secret-key"), 15*time.Minute)
+
+	tok1, _, err := svc.Generate("user-123")
+	require.NoError(t, err)
+	tok2, _, err := svc.Generate("user-123")
+	require.NoError(t, err)
+
+	claims1, err := svc.Verify(tok1)
+	require.NoError(t, err)
+	claims2, err := svc.Verify(tok2)
+	require.NoError(t, err)
+
+	jti1, ok := claims1["jti"].(string)
+	require.True(t, ok, "jti claim should be a string")
+	assert.NotEmpty(t, jti1)
+
+	jti2, ok := claims2["jti"].(string)
+	require.True(t, ok, "jti claim should be a string")
+	assert.NotEmpty(t, jti2)
+
+	assert.NotEqual(t, jti1, jti2, "each token should get its own jti")
+}
+
+func TestTokenService_Generate_IncludesIssuedAt(t *testing.T) {
+	svc := NewTokenService([]byte("test-secret-key"), 15*time.Minute)
+
+	tokenStr, _, err := svc.Generate("user-123")
+	require.NoError(t, err)
+
+	claims, err := svc.Verify(tokenStr)
+	require.NoError(t, err)
+
+	iat, ok := claims["iat"].(float64)
+	require.True(t, ok)
+	assert.InDelta(t, float64(time.Now().Unix()), iat, 2)
+}
