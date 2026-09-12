@@ -1,11 +1,17 @@
 package controllers
 
 import (
+	"GarageSaleAPI/application/server/apperror"
 	"GarageSaleAPI/application/services"
+	"GarageSaleAPI/domain/token"
 	"GarageSaleAPI/domain/user"
 	"GarageSaleAPI/infrastructure/persistence/memory"
+	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/test"
 	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -23,7 +29,8 @@ func Test_addUser(t *testing.T) {
 
 	repo := &memory.InMemoryUserRepository{}
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
-	controller := *NewUserController(services.NewUserService(repo, tokenService))
+	sessionService := services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})
+	controller := *NewUserController(services.NewUserService(repo, tokenService), sessionService, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
 
 	tests := []struct {
 		name       string
@@ -98,8 +105,9 @@ func Test_getUser(t *testing.T) {
 	ctx := test.CreateTestContext(t)
 	userRepo := &memory.InMemoryUserRepository{}
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+	sessionService := services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})
 	service := services.NewUserService(userRepo, tokenService)
-	controller := *NewUserController(service)
+	controller := *NewUserController(service, sessionService, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
 	creationTime := time.Now()
 	userId := uuid.NewString()
 	userToAdd := user.CreateUser(userId, "Edgouille", "MDP!@#111111111", "email@email.com", creationTime)
@@ -155,8 +163,9 @@ func TestUserController_login(t *testing.T) {
 	ctx := test.CreateTestContext(t)
 	userRepo := &memory.InMemoryUserRepository{}
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+	sessionService := services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})
 	service := services.NewUserService(userRepo, tokenService)
-	controller := *NewUserController(service)
+	controller := *NewUserController(service, sessionService, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
 	creationTime := time.Now()
 	userToAdd := user.CreateUser(
 		uuid.NewString(),
@@ -221,4 +230,246 @@ func TestUserController_login(t *testing.T) {
 			}
 		})
 	}
+}
+
+// logoutTestServer wires a controller behind a real mux so logout requests go
+// through the authentication middleware, the way they do in production.
+func logoutTestServer(t *testing.T) (*http.ServeMux, *services.TokenService) {
+	t.Helper()
+
+	userRepo := &memory.InMemoryUserRepository{}
+	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+	sessionService := services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})
+	service := services.NewUserService(userRepo, tokenService)
+	controller := NewUserController(service, sessionService, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
+
+	mux := http.NewServeMux()
+	controller.AddUserHandlersToMux(mux)
+
+	return mux, tokenService
+}
+
+func logoutRequest(authHeader string) *http.Request {
+	r := httptest.NewRequest(http.MethodPost, "/logout", nil)
+	if authHeader != "" {
+		r.Header.Set("Authorization", authHeader)
+	}
+	return r
+}
+
+func TestUserController_logout(t *testing.T) {
+	mux, tokenService := logoutTestServer(t)
+
+	tokenStr, _, err := tokenService.Generate(uuid.NewString())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, logoutRequest("Bearer "+tokenStr))
+
+	if w.Code != http.StatusNoContent {
+		t.Errorf("logout() got status code = %v, want = %v", w.Code, http.StatusNoContent)
+	}
+	if w.Body.Len() != 0 {
+		t.Errorf("logout() got body = %q, want empty", w.Body.String())
+	}
+}
+
+func TestUserController_logout_TokenIsDeadAfterwards(t *testing.T) {
+	mux, tokenService := logoutTestServer(t)
+
+	tokenStr, _, err := tokenService.Generate(uuid.NewString())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	first := httptest.NewRecorder()
+	mux.ServeHTTP(first, logoutRequest("Bearer "+tokenStr))
+	if first.Code != http.StatusNoContent {
+		t.Fatalf("first logout got status code = %v, want = %v", first.Code, http.StatusNoContent)
+	}
+
+	second := httptest.NewRecorder()
+	mux.ServeHTTP(second, logoutRequest("Bearer "+tokenStr))
+	if second.Code != http.StatusUnauthorized {
+		t.Errorf("reusing a logged-out token got status code = %v, want = %v", second.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestUserController_logout_LeavesOtherSessionsAlone(t *testing.T) {
+	mux, tokenService := logoutTestServer(t)
+
+	userId := uuid.NewString()
+	phone, _, err := tokenService.Generate(userId)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+	laptop, _, err := tokenService.Generate(userId)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, logoutRequest("Bearer "+phone))
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("logout got status code = %v, want = %v", w.Code, http.StatusNoContent)
+	}
+
+	// The laptop session should still be able to log itself out.
+	other := httptest.NewRecorder()
+	mux.ServeHTTP(other, logoutRequest("Bearer "+laptop))
+	if other.Code != http.StatusNoContent {
+		t.Errorf("the user's other session got status code = %v, want = %v", other.Code, http.StatusNoContent)
+	}
+}
+
+func TestUserController_logout_Unauthenticated(t *testing.T) {
+	tests := []struct {
+		name       string
+		authHeader string
+	}{
+		{name: "no authorization header", authHeader: ""},
+		{name: "malformed authorization header", authHeader: "some-token"},
+		{name: "invalid token", authHeader: "Bearer not-a-real-token"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mux, _ := logoutTestServer(t)
+
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, logoutRequest(tt.authHeader))
+
+			if w.Code != http.StatusUnauthorized {
+				t.Errorf("logout() got status code = %v, want = %v", w.Code, http.StatusUnauthorized)
+			}
+		})
+	}
+}
+
+// brokenRevokedTokenRepository stands in for a database that rejects writes.
+type brokenRevokedTokenRepository struct{}
+
+func (brokenRevokedTokenRepository) Revoke(context.Context, *token.RevokedToken) error {
+	return apperror.Internal(errors.New("database unavailable"))
+}
+
+func (brokenRevokedTokenRepository) IsRevoked(context.Context, string) (bool, error) {
+	return false, nil
+}
+
+func (brokenRevokedTokenRepository) DeleteExpired(context.Context, time.Time) error {
+	return apperror.Internal(errors.New("database unavailable"))
+}
+
+// If the revocation cannot be written, the client must not be told it was.
+func TestUserController_logout_RevocationFailureIsNotReportedAsSuccess(t *testing.T) {
+	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+	sessionService := services.NewSessionService(brokenRevokedTokenRepository{})
+	service := services.NewUserService(&memory.InMemoryUserRepository{}, tokenService)
+	controller := NewUserController(service, sessionService, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
+
+	mux := http.NewServeMux()
+	controller.AddUserHandlersToMux(mux)
+
+	tokenStr, _, err := tokenService.Generate(uuid.NewString())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, logoutRequest("Bearer "+tokenStr))
+
+	if w.Code == http.StatusNoContent {
+		t.Fatal("logout reported success even though the revocation was not written")
+	}
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("logout() got status code = %v, want = %v", w.Code, http.StatusInternalServerError)
+	}
+}
+
+// Logging out ends a session, not the account.
+func TestUserController_logout_UserCanLogInAgain(t *testing.T) {
+	ctx := test.CreateTestContext(t)
+	userRepo := &memory.InMemoryUserRepository{}
+	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+	sessionService := services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})
+	service := services.NewUserService(userRepo, tokenService)
+	controller := NewUserController(service, sessionService, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
+
+	mux := http.NewServeMux()
+	controller.AddUserHandlersToMux(mux)
+
+	// bcrypt hash of "MDP!@#111111111"
+	userToAdd := user.CreateUser(
+		uuid.NewString(),
+		"Edgouille",
+		"$2a$14$/IhjU2PxRypamw1kLypfIeB28u32sgVtTL2EvCl8Ar.sUlPk77drO",
+		"email@email.com",
+		time.Now())
+	if err := userRepo.Create(ctx, userToAdd); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	login := func() *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, test.CreateRequest(
+			http.MethodPost,
+			"/login",
+			bytes.NewBufferString(`{"Username":"Edgouille","Password":"MDP!@#111111111"}`),
+			"application/json",
+		))
+		return w
+	}
+
+	first := login()
+	if first.Code != http.StatusOK {
+		t.Fatalf("first login got status code = %v, want = %v", first.Code, http.StatusOK)
+	}
+	firstToken := extractToken(t, first.Body.String())
+
+	out := httptest.NewRecorder()
+	mux.ServeHTTP(out, logoutRequest("Bearer "+firstToken))
+	if out.Code != http.StatusNoContent {
+		t.Fatalf("logout got status code = %v, want = %v", out.Code, http.StatusNoContent)
+	}
+
+	second := login()
+	if second.Code != http.StatusOK {
+		t.Fatalf("login after logout got status code = %v, want = %v", second.Code, http.StatusOK)
+	}
+
+	// The fresh token must work; the old one must stay dead.
+	secondToken := extractToken(t, second.Body.String())
+	if secondToken == firstToken {
+		t.Fatal("expected a new token after logging back in")
+	}
+
+	reuse := httptest.NewRecorder()
+	mux.ServeHTTP(reuse, logoutRequest("Bearer "+firstToken))
+	if reuse.Code != http.StatusUnauthorized {
+		t.Errorf("the revoked token got status code = %v, want = %v", reuse.Code, http.StatusUnauthorized)
+	}
+
+	fresh := httptest.NewRecorder()
+	mux.ServeHTTP(fresh, logoutRequest("Bearer "+secondToken))
+	if fresh.Code != http.StatusNoContent {
+		t.Errorf("the new token got status code = %v, want = %v", fresh.Code, http.StatusNoContent)
+	}
+}
+
+func extractToken(t *testing.T, loginBody string) string {
+	t.Helper()
+
+	var response struct {
+		Token string `json:"token"`
+	}
+	if err := json.Unmarshal([]byte(loginBody), &response); err != nil {
+		t.Fatalf("could not read login response: %v", err)
+	}
+	if response.Token == "" {
+		t.Fatal("login response carried no token")
+	}
+	return response.Token
 }

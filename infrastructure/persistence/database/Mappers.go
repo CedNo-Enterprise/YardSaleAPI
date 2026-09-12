@@ -4,6 +4,7 @@ import (
 	"GarageSaleAPI/domain/address"
 	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/domain/seller"
+	"GarageSaleAPI/domain/token"
 	"GarageSaleAPI/domain/user"
 	"GarageSaleAPI/infrastructure/persistence/database/records"
 )
@@ -21,6 +22,15 @@ func userToRecord(u *user.User) records.UserRecord {
 
 func recordToUser(r records.UserRecord) *user.User {
 	return user.HydrateUser(r.Id, r.Username, r.Password, r.Email, r.CreatedAt, r.UpdatedAt)
+}
+
+func revokedTokenToRecord(t *token.RevokedToken) records.RevokedTokenRecord {
+	return records.RevokedTokenRecord{
+		Jti:       t.Jti(),
+		UserId:    t.UserId(),
+		ExpiresAt: t.ExpiresAt(),
+		RevokedAt: t.RevokedAt(),
+	}
 }
 
 func sellerToRecord(s *seller.Seller) records.SellerRecord {
