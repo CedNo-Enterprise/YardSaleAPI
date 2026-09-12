@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/services"
+	"GarageSaleAPI/infrastructure/persistence/memory"
 	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/test"
@@ -16,9 +16,9 @@ import (
 )
 
 func TestSaleController_addSale(t *testing.T) {
-	s := server.NewAppServer()
+	repo := &memory.InMemorySaleRepository{}
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
-	controller := *NewSaleController(services.NewSaleService(*s.GetSaleRepository()), interfaces.NewAuthenticationMiddleware(tokenService))
+	controller := *NewSaleController(services.NewSaleService(repo), interfaces.NewAuthenticationMiddleware(tokenService))
 
 	type args struct {
 		w      *httptest.ResponseRecorder
@@ -81,10 +81,6 @@ func TestSaleController_addSale(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Cleanup(func() {
-			s = server.NewAppServer()
-		})
-
 		t.Run(tt.name, func(t *testing.T) {
 			controller.addSale(tt.args.w, tt.args.r, tt.args.userId)
 
@@ -96,9 +92,9 @@ func TestSaleController_addSale(t *testing.T) {
 }
 
 func TestSaleController_getSale(t *testing.T) {
-	s := server.NewAppServer()
+	repo := &memory.InMemorySaleRepository{}
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
-	service := services.NewSaleService(*s.GetSaleRepository())
+	service := services.NewSaleService(repo)
 	controller := *NewSaleController(service, interfaces.NewAuthenticationMiddleware(tokenService))
 
 	saleToAdd := requests.SaleRequest{
@@ -151,10 +147,6 @@ func TestSaleController_getSale(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Cleanup(func() {
-				s = server.NewAppServer()
-			})
-
 			controller.getSale(tt.args.w, tt.args.r)
 
 			if tt.wantStatusCode != tt.args.w.Code {

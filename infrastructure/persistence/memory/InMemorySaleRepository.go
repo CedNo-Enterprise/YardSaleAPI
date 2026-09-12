@@ -10,7 +10,7 @@ type InMemorySaleRepository struct {
 	saleList []sale.Sale
 }
 
-func (repo *InMemorySaleRepository) Save(ctx context.Context, sale sale.Sale) error {
+func (repo *InMemorySaleRepository) Create(ctx context.Context, sale *sale.Sale) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -20,7 +20,7 @@ func (repo *InMemorySaleRepository) Save(ctx context.Context, sale sale.Sale) er
 		return apperror.Conflict("sale already exists", nil)
 	}
 
-	repo.saleList = append(repo.saleList, sale)
+	repo.saleList = append(repo.saleList, *sale)
 	return nil
 }
 

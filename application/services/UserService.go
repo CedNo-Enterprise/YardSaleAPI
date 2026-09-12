@@ -47,7 +47,7 @@ func (service *UserService) AddUser(ctx context.Context, userDTO requests.UserRe
 
 	userId := uuid.NewString()
 	newUser := user.CreateUser(userId, userDTO.Username, hashedPassword, userDTO.Email, time.Now())
-	err = service.userRepository.Save(ctx, newUser)
+	err = service.userRepository.Create(ctx, newUser)
 	if err != nil {
 		slog.Error(err.Error())
 		return err
@@ -56,10 +56,10 @@ func (service *UserService) AddUser(ctx context.Context, userDTO requests.UserRe
 	return nil
 }
 
-func (service *UserService) GetUserByUsername(ctx context.Context, username string) (*user.User, error) {
-	u, err := service.userRepository.GetByUsername(ctx, username)
+func (service *UserService) GetUserById(ctx context.Context, id string) (*user.User, error) {
+	u, err := service.userRepository.GetById(ctx, id)
 	if err != nil {
-		slog.Error("Error getting user by username", "username", username, "err", err.Error())
+		slog.Error("Error getting user by id", "id", id, "err", err.Error())
 		return nil, err
 	}
 
@@ -117,7 +117,7 @@ func (service *UserService) Login(ctx context.Context, loginDTO requests.LoginRe
 		return nil, apperror.Unauthorized("invalid credentials", err)
 	}
 
-	token, expiresAt, err := service.tokenGenerator.Generate(u.Username())
+	token, expiresAt, err := service.tokenGenerator.Generate(u.Id())
 	if err != nil {
 		return nil, apperror.Internal(err)
 	}

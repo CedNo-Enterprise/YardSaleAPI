@@ -7,7 +7,8 @@ import (
 
 type Seller struct {
 	id             string
-	username       string
+	userId         string
+	name           string
 	savedAddresses []SavedAddress
 	inventory      []InventoryItem
 	createdAt      time.Time
@@ -17,8 +18,12 @@ func (s *Seller) Id() string {
 	return s.id
 }
 
-func (s *Seller) Username() string {
-	return s.username
+func (s *Seller) UserId() string {
+	return s.userId
+}
+
+func (s *Seller) Name() string {
+	return s.name
 }
 
 func (s *Seller) SavedAddresses() []SavedAddress {
@@ -29,15 +34,24 @@ func (s *Seller) Inventory() []InventoryItem {
 	return s.inventory
 }
 
+func (s *Seller) CreatedAt() time.Time {
+	return s.createdAt
+}
+
 type SavedAddress struct {
-	id        string
+	id        int64
+	sellerId  string
 	label     string
 	address   address.Address
 	isDefault bool
 }
 
-func (s *SavedAddress) Id() string {
+func (s *SavedAddress) Id() int64 {
 	return s.id
+}
+
+func (s *SavedAddress) SellerId() string {
+	return s.sellerId
 }
 
 func (s *SavedAddress) Label() string {
@@ -53,15 +67,20 @@ func (s *SavedAddress) IsDefault() bool {
 }
 
 type InventoryItem struct {
-	id          string
+	id          int64
+	sellerId    string
 	name        string
 	description string
 	price       float64
 	status      ItemStatus
 }
 
-func (i *InventoryItem) Id() string {
+func (i *InventoryItem) Id() int64 {
 	return i.id
+}
+
+func (i *InventoryItem) SellerId() string {
+	return i.sellerId
 }
 
 func (i *InventoryItem) Name() string {

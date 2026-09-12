@@ -10,7 +10,7 @@ type InMemorySellerRepository struct {
 	sellerList []seller.Seller
 }
 
-func (repo *InMemorySellerRepository) Save(ctx context.Context, seller seller.Seller) error {
+func (repo *InMemorySellerRepository) Create(ctx context.Context, seller *seller.Seller) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -20,7 +20,7 @@ func (repo *InMemorySellerRepository) Save(ctx context.Context, seller seller.Se
 		return apperror.Conflict("seller already exists", nil)
 	}
 
-	repo.sellerList = append(repo.sellerList, seller)
+	repo.sellerList = append(repo.sellerList, *seller)
 	return nil
 }
 
@@ -37,13 +37,13 @@ func (repo *InMemorySellerRepository) GetById(ctx context.Context, id string) (*
 	return nil, apperror.NotFound("seller not found", nil)
 }
 
-func (repo *InMemorySellerRepository) GetByUsername(ctx context.Context, username string) (*seller.Seller, error) {
+func (repo *InMemorySellerRepository) GetByUserId(ctx context.Context, userId string) (*seller.Seller, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 
 	for _, value := range repo.sellerList {
-		if value.Username() == username {
+		if value.UserId() == userId {
 			return &value, nil
 		}
 	}

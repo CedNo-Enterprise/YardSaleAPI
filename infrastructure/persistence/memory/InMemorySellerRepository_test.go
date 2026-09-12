@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var validSeller = seller.CreateSeller("1", "user", time.Now())
+var validSeller = seller.CreateSeller("1", "user", "username", time.Now())
 
 func TestInMemorySellerRepository_Save(t *testing.T) {
 	type fields struct {
@@ -17,7 +17,7 @@ func TestInMemorySellerRepository_Save(t *testing.T) {
 	}
 	type args struct {
 		ctx    context.Context
-		seller seller.Seller
+		seller *seller.Seller
 	}
 	tests := []struct {
 		name        string
@@ -42,7 +42,7 @@ func TestInMemorySellerRepository_Save(t *testing.T) {
 		{
 			name: "save duplicate seller",
 			fields: fields{
-				sellerList: []seller.Seller{validSeller},
+				sellerList: []seller.Seller{*validSeller},
 			},
 			args: args{
 				ctx:    test.CreateTestContext(t),
@@ -85,7 +85,7 @@ func TestInMemorySellerRepository_Save(t *testing.T) {
 				sellerList: tt.fields.sellerList,
 			}
 
-			err := repo.Save(tt.args.ctx, tt.args.seller)
+			err := repo.Create(tt.args.ctx, tt.args.seller)
 			if (err != nil) != tt.wantErr ||
 				((err != nil) && err.Error() != tt.wantErrText) {
 				t.Errorf("Save() error = %v, wantErr %v", err, tt.wantErr)
@@ -116,13 +116,13 @@ func TestInMemorySellerRepository_GetById(t *testing.T) {
 		{
 			name: "get existing seller",
 			fields: fields{
-				sellerList: []seller.Seller{validSeller},
+				sellerList: []seller.Seller{*validSeller},
 			},
 			args: args{
 				ctx: test.CreateTestContext(t),
 				id:  "1",
 			},
-			want:    &validSeller,
+			want:    validSeller,
 			wantErr: false,
 		},
 		{
@@ -183,13 +183,13 @@ func TestInMemorySellerRepository_GetById(t *testing.T) {
 	}
 }
 
-func TestInMemorySellerRepository_GetByUsername(t *testing.T) {
+func TestInMemorySellerRepository_GetByUserId(t *testing.T) {
 	type fields struct {
 		sellerList []seller.Seller
 	}
 	type args struct {
-		ctx      context.Context
-		username string
+		ctx    context.Context
+		userId string
 	}
 	tests := []struct {
 		name        string
@@ -202,13 +202,13 @@ func TestInMemorySellerRepository_GetByUsername(t *testing.T) {
 		{
 			name: "get existing seller",
 			fields: fields{
-				sellerList: []seller.Seller{validSeller},
+				sellerList: []seller.Seller{*validSeller},
 			},
 			args: args{
-				ctx:      test.CreateTestContext(t),
-				username: "user",
+				ctx:    test.CreateTestContext(t),
+				userId: "user",
 			},
-			want:    &validSeller,
+			want:    validSeller,
 			wantErr: false,
 		},
 		{
@@ -217,8 +217,8 @@ func TestInMemorySellerRepository_GetByUsername(t *testing.T) {
 				sellerList: []seller.Seller{},
 			},
 			args: args{
-				ctx:      test.CreateTestContext(t),
-				username: "user",
+				ctx:    test.CreateTestContext(t),
+				userId: "user",
 			},
 			want:        nil,
 			wantErr:     true,
@@ -230,8 +230,8 @@ func TestInMemorySellerRepository_GetByUsername(t *testing.T) {
 				sellerList: []seller.Seller{},
 			},
 			args: args{
-				ctx:      test.CreateTimedOutTestContext(t),
-				username: "user",
+				ctx:    test.CreateTimedOutTestContext(t),
+				userId: "user",
 			},
 			want:        nil,
 			wantErr:     true,
@@ -243,8 +243,8 @@ func TestInMemorySellerRepository_GetByUsername(t *testing.T) {
 				sellerList: []seller.Seller{},
 			},
 			args: args{
-				ctx:      test.CreateCancelledTestContext(),
-				username: "user",
+				ctx:    test.CreateCancelledTestContext(),
+				userId: "user",
 			},
 			want:        nil,
 			wantErr:     true,
@@ -256,14 +256,14 @@ func TestInMemorySellerRepository_GetByUsername(t *testing.T) {
 			repo := &InMemorySellerRepository{
 				sellerList: tt.fields.sellerList,
 			}
-			got, err := repo.GetByUsername(tt.args.ctx, tt.args.username)
+			got, err := repo.GetByUserId(tt.args.ctx, tt.args.userId)
 			if (err != nil) != tt.wantErr ||
 				((err != nil) && err.Error() != tt.wantErrText) {
-				t.Errorf("GetByUsername() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetByUserId() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetByUsername() got = %v, want %v", got, tt.want)
+				t.Errorf("GetByUserId() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

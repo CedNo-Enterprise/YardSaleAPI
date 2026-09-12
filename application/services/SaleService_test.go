@@ -1,10 +1,10 @@
 package services
 
 import (
-	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/server/apperror"
 	"GarageSaleAPI/domain/address"
 	"GarageSaleAPI/domain/sale"
+	"GarageSaleAPI/infrastructure/persistence/memory"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/test"
 	"reflect"
@@ -29,7 +29,7 @@ var validAddress = address.CreateAddress(
 )
 
 func TestSaleService_AddSale(t *testing.T) {
-	s := server.NewAppServer()
+	repo := &memory.InMemorySaleRepository{}
 
 	type args struct {
 		service *SaleService
@@ -44,7 +44,7 @@ func TestSaleService_AddSale(t *testing.T) {
 		{
 			name: "add valid sale",
 			args: args{
-				service: NewSaleService(*s.GetSaleRepository()),
+				service: NewSaleService(repo),
 				saleDTO: requests.SaleRequest{
 					SellerId: uuid.NewString(),
 					Name:     "Best sale in the east",
@@ -57,7 +57,7 @@ func TestSaleService_AddSale(t *testing.T) {
 		{
 			name: "add invalid sale",
 			args: args{
-				service: NewSaleService(*s.GetSaleRepository()),
+				service: NewSaleService(repo),
 				saleDTO: requests.SaleRequest{
 					Name:    "",
 					Address: validAddressRequest,
@@ -70,9 +70,6 @@ func TestSaleService_AddSale(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := test.CreateTestContext(t)
-			t.Cleanup(func() {
-				s = server.NewAppServer()
-			})
 
 			_, err := tt.args.service.AddSale(ctx, tt.args.saleDTO)
 			if (err != nil) != tt.wantErr {
@@ -87,8 +84,7 @@ func TestSaleService_AddSale(t *testing.T) {
 }
 
 func TestSaleService_GetSaleById(t *testing.T) {
-	s := server.NewAppServer()
-	repo := *s.GetSaleRepository()
+	repo := &memory.InMemorySaleRepository{}
 	saleId := uuid.NewString()
 	newSale := sale.CreateSale(
 		saleId, uuid.NewString(), "newSale",
@@ -111,7 +107,7 @@ func TestSaleService_GetSaleById(t *testing.T) {
 				service: NewSaleService(repo),
 				saleId:  saleId,
 			},
-			want:    &newSale,
+			want:    newSale,
 			wantErr: false,
 		},
 		{
@@ -126,7 +122,7 @@ func TestSaleService_GetSaleById(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := test.CreateTestContext(t)
-			_ = repo.Save(ctx, newSale)
+			_ = repo.Create(ctx, newSale)
 			got, err := tt.args.service.GetSaleById(ctx, tt.args.saleId)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetSaleById() error = %v, wantErr %v", err, tt.wantErr)
