@@ -5,10 +5,11 @@ import (
 	"time"
 )
 
-func CreateSeller(id string, userId string, createdTime time.Time) *Seller {
+func CreateSeller(id string, userId string, username string, createdTime time.Time) *Seller {
 	return &Seller{
 		id:             id,
 		userId:         userId,
+		name:           username,
 		savedAddresses: []SavedAddress{},
 		inventory:      []InventoryItem{},
 		createdAt:      createdTime,

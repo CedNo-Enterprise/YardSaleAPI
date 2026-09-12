@@ -55,7 +55,6 @@ func (repo *InMemoryUserRepository) GetByEmail(ctx context.Context, email string
 	return nil, apperror.NotFound("user not found", nil)
 }
 
-// todo: add tests
 func (repo *InMemoryUserRepository) GetById(ctx context.Context, id string) (*user.User, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err

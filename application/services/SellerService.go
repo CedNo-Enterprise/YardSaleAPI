@@ -20,14 +20,14 @@ func NewSellerService(sellerRepo seller.SellerRepository, userRepo user.UserRepo
 	return &SellerService{sellerRepository: sellerRepo, userRepository: userRepo}
 }
 
-func (service *SellerService) AddSeller(ctx context.Context, userId string) (*string, error) {
+func (service *SellerService) AddSeller(ctx context.Context, userId string, username string) (*string, error) {
 	sellerId := uuid.NewString()
-	s := seller.CreateSeller(sellerId, userId, time.Now())
+	s := seller.CreateSeller(sellerId, userId, username, time.Now())
 
 	canAdd := service.userExists(ctx, userId)
 	if !canAdd {
-		err := apperror.Invalid("invalid username", nil)
-		slog.Error("invalid username", "err", err)
+		err := apperror.Invalid("invalid userId", nil)
+		slog.Error("invalid userId", "err", err)
 		return nil, err
 	}
 

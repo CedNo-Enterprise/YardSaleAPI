@@ -6,7 +6,6 @@ import (
 	"GarageSaleAPI/infrastructure/persistence/database/records"
 	"context"
 	"errors"
-	"fmt"
 
 	"gorm.io/gorm"
 )
@@ -23,7 +22,7 @@ func (r *SellerRepository) Create(ctx context.Context, s *seller.Seller) error {
 	db := r.db.WithContext(ctx)
 
 	record := sellerToRecord(s)
-	if err := db.Create(record).Error; err != nil {
+	if err := db.Create(&record).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return apperror.Conflict("seller already exists", err)
 		}
@@ -32,7 +31,6 @@ func (r *SellerRepository) Create(ctx context.Context, s *seller.Seller) error {
 	return nil
 }
 
-// todo: Change errors to apperror types
 func (r *SellerRepository) GetById(ctx context.Context, id string) (*seller.Seller, error) {
 	db := r.db.WithContext(ctx)
 
@@ -45,13 +43,13 @@ func (r *SellerRepository) GetById(ctx context.Context, id string) (*seller.Sell
 	}
 
 	var savedAddressRecords []records.SavedAddressRecord
-	if err := db.Preload("Address").Where("sellerId = ?", id).Find(&savedAddressRecords).Error; err != nil {
-		return nil, fmt.Errorf("get saved addresses: %w", err)
+	if err := db.Preload("Address").Where("seller_id = ?", id).Find(&savedAddressRecords).Error; err != nil {
+		return nil, apperror.Internal(err)
 	}
 
 	var inventoryRecords []records.InventoryItemRecord
-	if err := db.Where("sellerId = ?", id).Find(&inventoryRecords).Error; err != nil {
-		return nil, fmt.Errorf("get inventory: %w", err)
+	if err := db.Where("seller_id = ?", id).Find(&inventoryRecords).Error; err != nil {
+		return nil, apperror.Internal(err)
 	}
 
 	savedAddresses := make([]seller.SavedAddress, len(savedAddressRecords))
@@ -74,12 +72,11 @@ func (r *SellerRepository) GetById(ctx context.Context, id string) (*seller.Sell
 	), nil
 }
 
-// todo: Change errors to apperror types
 func (r *SellerRepository) GetByUserId(ctx context.Context, userId string) (*seller.Seller, error) {
 	db := r.db.WithContext(ctx)
 
 	var sellerRecord records.SellerRecord
-	if err := db.First(&sellerRecord, "userId = ?", userId).Error; err != nil {
+	if err := db.First(&sellerRecord, "user_id = ?", userId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperror.NotFound("seller not found", err)
 		}
@@ -87,13 +84,13 @@ func (r *SellerRepository) GetByUserId(ctx context.Context, userId string) (*sel
 	}
 
 	var savedAddressRecords []records.SavedAddressRecord
-	if err := db.Preload("Address").Where("sellerId = ?", sellerRecord.Id).Find(&savedAddressRecords).Error; err != nil {
-		return nil, fmt.Errorf("get saved addresses: %w", err)
+	if err := db.Preload("Address").Where("seller_id = ?", sellerRecord.Id).Find(&savedAddressRecords).Error; err != nil {
+		return nil, apperror.Internal(err)
 	}
 
 	var inventoryRecords []records.InventoryItemRecord
-	if err := db.Where("sellerId = ?", sellerRecord.Id).Find(&inventoryRecords).Error; err != nil {
-		return nil, fmt.Errorf("get inventory: %w", err)
+	if err := db.Where("seller_id = ?", sellerRecord.Id).Find(&inventoryRecords).Error; err != nil {
+		return nil, apperror.Internal(err)
 	}
 
 	savedAddresses := make([]seller.SavedAddress, len(savedAddressRecords))

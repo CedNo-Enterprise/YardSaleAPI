@@ -15,7 +15,7 @@ func NewGormDB() (*gorm.DB, error) {
 		return nil, fmt.Errorf("DATABASE_URL is not set")
 	}
 
-	db, err := gorm.Open(postgres.Open(url), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(url), &gorm.Config{TranslateError: true})
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to database: %w", err)
 	}

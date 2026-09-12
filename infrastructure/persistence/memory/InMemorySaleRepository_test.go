@@ -23,7 +23,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 		SaleList []sale.Sale
 	}
 	type args struct {
-		sale sale.Sale
+		sale *sale.Sale
 		ctx  context.Context
 	}
 
@@ -55,7 +55,7 @@ func TestInMemorySaleRepository_AddSale(t *testing.T) {
 		{
 			name: "add duplicate sale",
 			fields: fields{
-				[]sale.Sale{validSale},
+				[]sale.Sale{*validSale},
 			},
 			args: args{
 				sale: validSale,
@@ -139,20 +139,20 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 		{
 			name: "get existing sale",
 			fields: fields{
-				[]sale.Sale{validSale},
+				[]sale.Sale{*validSale},
 			},
 			args: args{
 				id:  validId,
 				ctx: test.CreateTestContext(t),
 			},
-			want:    &validSale,
+			want:    validSale,
 			wantErr: false,
 		},
 		{
 			name: "get nonexistent sale",
 			fields: fields{
 				[]sale.Sale{
-					sale.CreateSale(
+					*sale.CreateSale(
 						uuid.NewString(), uuid.NewString(), "different sale",
 						validAddress, time.Now(), "", time.Now(),
 					),
@@ -182,7 +182,7 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 		{
 			name: "get sale with timed out context",
 			fields: fields{
-				[]sale.Sale{validSale},
+				[]sale.Sale{*validSale},
 			},
 			args: args{
 				id:  validId,
@@ -195,7 +195,7 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 		{
 			name: "get sale with cancelled context",
 			fields: fields{
-				[]sale.Sale{validSale},
+				[]sale.Sale{*validSale},
 			},
 			args: args{
 				id:  validId,

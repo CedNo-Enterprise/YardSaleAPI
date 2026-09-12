@@ -20,7 +20,7 @@ func NewUserController(userService *services.UserService) *UserController {
 
 func (controller *UserController) AddUserHandlersToMux(mux *http.ServeMux) {
 	mux.HandleFunc("POST /user", controller.addUser)
-	mux.HandleFunc("GET /user/{username}", controller.getUser)
+	mux.HandleFunc("GET /user/{id}", controller.getUser)
 	mux.HandleFunc("POST /login", controller.login)
 }
 
@@ -45,9 +45,9 @@ func (controller *UserController) addUser(w http.ResponseWriter, r *http.Request
 }
 
 func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request) {
-	username := r.PathValue("username")
+	id := r.PathValue("id")
 
-	u, err := controller.userService.GetUserByUsername(r.Context(), username)
+	u, err := controller.userService.GetUserById(r.Context(), id)
 	if err != nil {
 		server.WriteError(w, err)
 		return

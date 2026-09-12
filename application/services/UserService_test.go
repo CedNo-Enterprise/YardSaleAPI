@@ -1,9 +1,9 @@
 package services
 
 import (
-	"GarageSaleAPI/application/server"
 	"GarageSaleAPI/application/server/apperror"
 	"GarageSaleAPI/domain/user"
+	"GarageSaleAPI/infrastructure/persistence/memory"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/test"
 	"context"
@@ -17,7 +17,7 @@ import (
 )
 
 func TestAddUser(t *testing.T) {
-	s := server.NewAppServer()
+	repo := &memory.InMemoryUserRepository{}
 	tokenService := NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
 
 	type args struct {
@@ -33,7 +33,7 @@ func TestAddUser(t *testing.T) {
 		{
 			name: "add valid user",
 			args: args{
-				userService: NewUserService(*s.GetUserRepository(), tokenService),
+				userService: NewUserService(repo, tokenService),
 				userDTO: requests.UserRequest{
 					Username: "username",
 					Password: "password1111111",
@@ -45,7 +45,7 @@ func TestAddUser(t *testing.T) {
 		{
 			name: "add user with invalid email",
 			args: args{
-				userService: NewUserService(*s.GetUserRepository(), tokenService),
+				userService: NewUserService(repo, tokenService),
 				userDTO: requests.UserRequest{
 					Username: "username",
 					Password: "password1111111",
@@ -59,9 +59,6 @@ func TestAddUser(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := test.CreateTestContext(t)
-			t.Cleanup(func() {
-				s = server.NewAppServer()
-			})
 
 			err := tt.args.userService.AddUser(ctx, tt.args.userDTO)
 			if (err != nil) != tt.wantErr {
@@ -77,57 +74,49 @@ func TestAddUser(t *testing.T) {
 	}
 }
 
-func TestGetUserByUsername(t *testing.T) {
-	s := server.NewAppServer()
+func TestGetUserById(t *testing.T) {
+	repo := &memory.InMemoryUserRepository{}
 	tokenService := NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+	userService := NewUserService(repo, tokenService)
 
-	uDTO := requests.UserRequest{
-		Username: "username",
-		Password: "password1111111",
-		Email:    "email@email.com",
+	ctx := test.CreateTestContext(t)
+	userId := uuid.NewString()
+	addedUser := user.CreateUser(userId, "username", "hashed-password", "email@email.com", time.Now())
+	if err := repo.Create(ctx, addedUser); err != nil {
+		t.Fatal(err.Error())
 	}
 
 	type args struct {
 		userService *UserService
-		username    string
+		id          string
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    *user.User
 		wantErr bool
 	}{
 		{
-			name: "get added user by username",
+			name: "get added user by id",
 			args: args{
-				userService: NewUserService(*s.GetUserRepository(), tokenService),
-				username:    "username",
+				userService: userService,
+				id:          userId,
 			},
 			wantErr: false,
 		},
 		{
-			name: "get non-added user by username",
+			name: "get non-added user by id",
 			args: args{
-				userService: NewUserService(*s.GetUserRepository(), tokenService),
-				username:    "fake-username",
+				userService: userService,
+				id:          uuid.NewString(),
 			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := test.CreateTestContext(t)
-			t.Cleanup(func() {
-				s = server.NewAppServer()
-			})
-
-			e := tt.args.userService.AddUser(ctx, uDTO)
-			if e != nil && !tt.wantErr {
-				t.Errorf("AddUser() error = %v, wantErr %v", e, tt.wantErr)
-			}
-			_, err := tt.args.userService.GetUserByUsername(ctx, tt.args.username)
+			_, err := tt.args.userService.GetUserById(ctx, tt.args.id)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetUserByUsername() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetUserById() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 		})
@@ -374,8 +363,7 @@ func Test_validateLogin(t *testing.T) {
 }
 
 func TestUserService_Login(t *testing.T) {
-	s := server.NewAppServer()
-	userRepo := *s.GetUserRepository()
+	userRepo := &memory.InMemoryUserRepository{}
 	hashedPassword, _ := hashPassword("validPassword")
 	newUser := user.CreateUser(uuid.NewString(), "username", hashedPassword, "email@email.com", time.Now())
 	_ = userRepo.Create(context.Background(), newUser)
@@ -396,7 +384,7 @@ func TestUserService_Login(t *testing.T) {
 		{
 			name: "login successfully",
 			fields: fields{
-				*s.GetUserRepository(),
+				userRepo,
 				NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour),
 			},
 			args: args{
@@ -411,7 +399,7 @@ func TestUserService_Login(t *testing.T) {
 		{
 			name: "login successfully",
 			fields: fields{
-				*s.GetUserRepository(),
+				userRepo,
 				NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour),
 			},
 			args: args{

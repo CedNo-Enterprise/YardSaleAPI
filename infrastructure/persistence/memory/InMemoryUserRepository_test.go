@@ -16,7 +16,7 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 		UserList []user.User
 	}
 	type args struct {
-		user user.User
+		user *user.User
 		ctx  context.Context
 	}
 
@@ -46,7 +46,7 @@ func TestInMemoryUserRepository_AddUser(t *testing.T) {
 		{
 			name: "add duplicate user",
 			fields: fields{
-				UserList: []user.User{validUser},
+				UserList: []user.User{*validUser},
 			},
 			args: args{
 				user: validUser,
@@ -126,13 +126,13 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 		{
 			name: "get user by username",
 			fields: fields{
-				UserList: []user.User{validUser},
+				UserList: []user.User{*validUser},
 			},
 			args: args{
 				username: "username",
 				ctx:      test.CreateTestContext(t),
 			},
-			want:    &validUser,
+			want:    validUser,
 			wantErr: false,
 			textErr: "",
 		},
@@ -152,7 +152,7 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 		{
 			name: "get nonexistent user",
 			fields: fields{
-				UserList: []user.User{validUser},
+				UserList: []user.User{*validUser},
 			},
 			args: args{
 				username: "InvalidUsername",
@@ -164,7 +164,7 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 		}, {
 			name: "get user timed out context",
 			fields: fields{
-				UserList: []user.User{validUser},
+				UserList: []user.User{*validUser},
 			},
 			args: args{
 				username: "username",
@@ -177,7 +177,7 @@ func TestInMemoryUserRepository_GetUserByUsername(t *testing.T) {
 		{
 			name: "get user with cancelled context",
 			fields: fields{
-				UserList: []user.User{validUser},
+				UserList: []user.User{*validUser},
 			},
 			args: args{
 				username: "username",
@@ -229,13 +229,13 @@ func TestInMemoryUserRepository_GetByEmail(t *testing.T) {
 		{
 			name: "get user by username",
 			fields: fields{
-				UserList: []user.User{validUser},
+				UserList: []user.User{*validUser},
 			},
 			args: args{
 				email: "email@email.com",
 				ctx:   test.CreateTestContext(t),
 			},
-			want:    &validUser,
+			want:    validUser,
 			wantErr: false,
 			textErr: "",
 		},
@@ -255,7 +255,7 @@ func TestInMemoryUserRepository_GetByEmail(t *testing.T) {
 		{
 			name: "get nonexistent user",
 			fields: fields{
-				UserList: []user.User{validUser},
+				UserList: []user.User{*validUser},
 			},
 			args: args{
 				email: "invalidemail@email.com",
@@ -267,7 +267,7 @@ func TestInMemoryUserRepository_GetByEmail(t *testing.T) {
 		}, {
 			name: "get user timed out context",
 			fields: fields{
-				UserList: []user.User{validUser},
+				UserList: []user.User{*validUser},
 			},
 			args: args{
 				email: "email@email.com",
@@ -280,7 +280,7 @@ func TestInMemoryUserRepository_GetByEmail(t *testing.T) {
 		{
 			name: "get user with cancelled context",
 			fields: fields{
-				UserList: []user.User{validUser},
+				UserList: []user.User{*validUser},
 			},
 			args: args{
 				email: "email@email.com",
@@ -305,6 +305,109 @@ func TestInMemoryUserRepository_GetByEmail(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetUserByEmail() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestInMemoryUserRepository_GetById(t *testing.T) {
+	type fields struct {
+		UserList []user.User
+	}
+	type args struct {
+		id  string
+		ctx context.Context
+	}
+
+	validUser := user.CreateUser(uuid.NewString(), "username", "password", "email@email.com", time.Now())
+
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    *user.User
+		wantErr bool
+		textErr string
+	}{
+		{
+			name: "get user by id",
+			fields: fields{
+				UserList: []user.User{*validUser},
+			},
+			args: args{
+				id:  validUser.Id(),
+				ctx: test.CreateTestContext(t),
+			},
+			want:    validUser,
+			wantErr: false,
+			textErr: "",
+		},
+		{
+			name: "get user with empty list",
+			fields: fields{
+				UserList: []user.User{},
+			},
+			args: args{
+				id:  validUser.Id(),
+				ctx: test.CreateTestContext(t),
+			},
+			want:    nil,
+			wantErr: true,
+			textErr: "user not found",
+		},
+		{
+			name: "get nonexistent user",
+			fields: fields{
+				UserList: []user.User{*validUser},
+			},
+			args: args{
+				id:  uuid.NewString(),
+				ctx: test.CreateTestContext(t),
+			},
+			want:    nil,
+			wantErr: true,
+			textErr: "user not found",
+		}, {
+			name: "get user timed out context",
+			fields: fields{
+				UserList: []user.User{*validUser},
+			},
+			args: args{
+				id:  validUser.Id(),
+				ctx: test.CreateTimedOutTestContext(t),
+			},
+			want:    nil,
+			wantErr: true,
+			textErr: context.DeadlineExceeded.Error(),
+		},
+		{
+			name: "get user with cancelled context",
+			fields: fields{
+				UserList: []user.User{*validUser},
+			},
+			args: args{
+				id:  validUser.Id(),
+				ctx: test.CreateCancelledTestContext(),
+			},
+			want:    nil,
+			wantErr: true,
+			textErr: context.Canceled.Error(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := InMemoryUserRepository{
+				userList: tt.fields.UserList,
+			}
+			got, err := repo.GetById(tt.args.ctx, tt.args.id)
+			if err != nil && !tt.wantErr ||
+				((err != nil) && err.Error() != tt.textErr) {
+				t.Errorf("GetById() error = %v, wantErr %v\ntext = %v, textErr = %v",
+					err, tt.wantErr, err.Error(), tt.textErr)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetById() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
