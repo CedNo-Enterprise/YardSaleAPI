@@ -55,6 +55,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&records.RevokedTokenRecord{},
 		&records.SellerRecord{},
 		&records.AddressRecord{},
+		&records.BuyerRecord{},
 		&records.SavedAddressRecord{},
 		&records.InventoryItemRecord{},
 		&records.SaleRecord{},
