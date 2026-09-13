@@ -42,8 +42,9 @@ func ValidateContentType(w http.ResponseWriter, r *http.Request, t string) {
 }
 
 func WriteResponse(w http.ResponseWriter, response any, status int, contentType string) {
-	w.WriteHeader(status)
+	// Headers must be set before WriteHeader: once the status is written, later
+	// header changes are silently discarded and Go sniffs the type instead.
 	w.Header().Set("Content-Type", contentType)
-	Marshal(w, response)
+	w.WriteHeader(status)
 	Encode(w, response)
 }
