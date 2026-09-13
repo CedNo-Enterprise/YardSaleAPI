@@ -36,3 +36,23 @@ func (repo *InMemorySaleRepository) GetById(ctx context.Context, id string) (*sa
 	}
 	return nil, apperror.NotFound("sale not found", nil)
 }
+
+func (repo *InMemorySaleRepository) GetByIds(ctx context.Context, ids []string) ([]sale.Sale, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	wanted := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		wanted[id] = struct{}{}
+	}
+
+	found := make([]sale.Sale, 0, len(ids))
+	for _, value := range repo.saleList {
+		if _, ok := wanted[value.Id()]; ok {
+			found = append(found, value)
+		}
+	}
+
+	return found, nil
+}

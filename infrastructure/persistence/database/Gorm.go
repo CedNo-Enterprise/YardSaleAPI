@@ -33,5 +33,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&records.InventoryItemRecord{},
 		&records.SaleRecord{},
 		&records.SaleItemRecord{},
+		&records.ItineraryRecord{},
+		&records.ItineraryStopRecord{},
 	)
 }

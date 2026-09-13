@@ -61,3 +61,36 @@ func (r *SaleRepository) GetById(ctx context.Context, id string) (*sale.Sale, er
 
 	return recordToSale(saleRecord, items), nil
 }
+
+func (r *SaleRepository) GetByIds(ctx context.Context, ids []string) ([]sale.Sale, error) {
+	if len(ids) == 0 {
+		// Postgres rejects "IN ()", so never build that query.
+		return []sale.Sale{}, nil
+	}
+
+	db := r.db.WithContext(ctx)
+
+	var saleRecords []records.SaleRecord
+	// Find on a slice yields no error for zero rows, so there is no not-found case.
+	if err := db.Preload("Address").Where("id IN ?", ids).Find(&saleRecords).Error; err != nil {
+		return nil, apperror.Internal(err)
+	}
+
+	var itemRecords []records.SaleItemRecord
+	if err := db.Where("sale_id IN ?", ids).Find(&itemRecords).Error; err != nil {
+		return nil, apperror.Internal(err)
+	}
+
+	// Grouped in one pass rather than a query per sale.
+	itemsBySale := make(map[string][]sale.SaleItem, len(saleRecords))
+	for _, rec := range itemRecords {
+		itemsBySale[rec.SaleId] = append(itemsBySale[rec.SaleId], *recordToSaleItem(rec))
+	}
+
+	sales := make([]sale.Sale, len(saleRecords))
+	for i, rec := range saleRecords {
+		sales[i] = *recordToSale(rec, itemsBySale[rec.Id])
+	}
+
+	return sales, nil
+}

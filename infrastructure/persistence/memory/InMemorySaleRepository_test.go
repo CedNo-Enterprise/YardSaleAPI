@@ -226,3 +226,105 @@ func TestInMemorySaleRepository_GetSaleById(t *testing.T) {
 		})
 	}
 }
+
+func TestInMemorySaleRepository_GetByIds(t *testing.T) {
+	type fields struct {
+		SaleList []sale.Sale
+	}
+	type args struct {
+		ids []string
+		ctx context.Context
+	}
+
+	firstId := "123e4567-e89b-12d3-a456-426614174000"
+	secondId := "123e4567-e89b-12d3-a456-426614174001"
+	firstSale := sale.CreateSale(
+		firstId, uuid.NewString(), "first sale",
+		validAddress, time.Now(), "", time.Now(),
+	)
+	secondSale := sale.CreateSale(
+		secondId, uuid.NewString(), "second sale",
+		validAddress, time.Now(), "", time.Now(),
+	)
+	stored := []sale.Sale{*firstSale, *secondSale}
+
+	tests := []struct {
+		name        string
+		fields      fields
+		args        args
+		want        []sale.Sale
+		wantErr     bool
+		wantErrText string
+	}{
+		{
+			name:   "get every requested sale",
+			fields: fields{stored},
+			args: args{
+				ids: []string{firstId, secondId},
+				ctx: test.CreateTestContext(t),
+			},
+			want:    []sale.Sale{*firstSale, *secondSale},
+			wantErr: false,
+		},
+		{
+			name:   "partial match returns only what exists",
+			fields: fields{stored},
+			args: args{
+				ids: []string{firstId, uuid.NewString()},
+				ctx: test.CreateTestContext(t),
+			},
+			want:    []sale.Sale{*firstSale},
+			wantErr: false,
+		},
+		{
+			name:   "no ids returns nothing",
+			fields: fields{stored},
+			args: args{
+				ids: []string{},
+				ctx: test.CreateTestContext(t),
+			},
+			want:    []sale.Sale{},
+			wantErr: false,
+		},
+		{
+			name:   "no matches returns nothing",
+			fields: fields{stored},
+			args: args{
+				ids: []string{uuid.NewString()},
+				ctx: test.CreateTestContext(t),
+			},
+			want:    []sale.Sale{},
+			wantErr: false,
+		},
+		{
+			name:   "get sales with cancelled context",
+			fields: fields{stored},
+			args: args{
+				ids: []string{firstId},
+				ctx: test.CreateCancelledTestContext(),
+			},
+			want:        nil,
+			wantErr:     true,
+			wantErrText: context.Canceled.Error(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &InMemorySaleRepository{
+				saleList: tt.fields.SaleList,
+			}
+
+			got, err := repo.GetByIds(tt.args.ctx, tt.args.ids)
+
+			if (err != nil) != tt.wantErr ||
+				((err != nil) && err.Error() != tt.wantErrText) {
+				t.Errorf("GetByIds() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetByIds() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
