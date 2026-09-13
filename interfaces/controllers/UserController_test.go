@@ -198,7 +198,7 @@ func TestUserController_login(t *testing.T) {
 					http.MethodPost,
 					"/login",
 					bytes.NewBufferString(`{
-						"Username":  "Edgouille",
+						"Email":     "email@email.com",
 						"Password":  "MDP!@#111111111"
 					}`),
 					"application/json",
@@ -214,7 +214,7 @@ func TestUserController_login(t *testing.T) {
 					http.MethodPost,
 					"/login",
 					bytes.NewBufferString(`{
-						"username":  "Edgouille",
+						"email":     "email@email.com",
 						"password":  "invalidPassword"
 					}`),
 					"application/json",
@@ -419,7 +419,7 @@ func TestUserController_logout_UserCanLogInAgain(t *testing.T) {
 		mux.ServeHTTP(w, test.CreateRequest(
 			http.MethodPost,
 			"/login",
-			bytes.NewBufferString(`{"Username":"Edgouille","Password":"MDP!@#111111111"}`),
+			bytes.NewBufferString(`{"Email":"email@email.com","Password":"MDP!@#111111111"}`),
 			"application/json",
 		))
 		return w
@@ -520,12 +520,12 @@ func throttleTestServer(t *testing.T, usernameLimit int) *http.ServeMux {
 	return mux
 }
 
-func attemptLogin(mux *http.ServeMux, username string, password string) *httptest.ResponseRecorder {
+func attemptLogin(mux *http.ServeMux, email string, password string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, test.CreateRequest(
 		http.MethodPost,
 		"/login",
-		bytes.NewBufferString(fmt.Sprintf(`{"Username":%q,"Password":%q}`, username, password)),
+		bytes.NewBufferString(fmt.Sprintf(`{"Email":%q,"Password":%q}`, email, password)),
 		"application/json",
 	))
 	return w
@@ -535,13 +535,13 @@ func TestUserController_login_BlocksAfterTooManyFailures(t *testing.T) {
 	mux := throttleTestServer(t, 3)
 
 	for i := 1; i <= 3; i++ {
-		w := attemptLogin(mux, "Edgouille", "wrongpassword1")
+		w := attemptLogin(mux, "email@email.com", "wrongpassword1")
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("attempt %d got status code = %v, want = %v", i, w.Code, http.StatusUnauthorized)
 		}
 	}
 
-	blocked := attemptLogin(mux, "Edgouille", "wrongpassword1")
+	blocked := attemptLogin(mux, "email@email.com", "wrongpassword1")
 	if blocked.Code != http.StatusTooManyRequests {
 		t.Fatalf("the attempt past the limit got status code = %v, want = %v", blocked.Code, http.StatusTooManyRequests)
 	}
@@ -562,10 +562,10 @@ func TestUserController_login_BlockedEvenWithTheCorrectPassword(t *testing.T) {
 	mux := throttleTestServer(t, 3)
 
 	for i := 0; i < 3; i++ {
-		attemptLogin(mux, "Edgouille", "wrongpassword1")
+		attemptLogin(mux, "email@email.com", "wrongpassword1")
 	}
 
-	w := attemptLogin(mux, "Edgouille", "MDP!@#111111111")
+	w := attemptLogin(mux, "email@email.com", "MDP!@#111111111")
 
 	if w.Code != http.StatusTooManyRequests {
 		t.Errorf("a blocked user with the right password got status code = %v, want = %v", w.Code, http.StatusTooManyRequests)
@@ -578,16 +578,16 @@ func TestUserController_login_SuccessClearsTheBudget(t *testing.T) {
 	// Two failures, then a success, then two more failures must not trip a
 	// limit of three.
 	for i := 0; i < 2; i++ {
-		attemptLogin(mux, "Edgouille", "wrongpassword1")
+		attemptLogin(mux, "email@email.com", "wrongpassword1")
 	}
 
-	ok := attemptLogin(mux, "Edgouille", "MDP!@#111111111")
+	ok := attemptLogin(mux, "email@email.com", "MDP!@#111111111")
 	if ok.Code != http.StatusOK {
 		t.Fatalf("login got status code = %v, want = %v", ok.Code, http.StatusOK)
 	}
 
 	for i := 1; i <= 2; i++ {
-		w := attemptLogin(mux, "Edgouille", "wrongpassword1")
+		w := attemptLogin(mux, "email@email.com", "wrongpassword1")
 		if w.Code != http.StatusUnauthorized {
 			t.Errorf("failure %d after a success got status code = %v, want = %v", i, w.Code, http.StatusUnauthorized)
 		}
@@ -598,12 +598,12 @@ func TestUserController_login_OtherAccountsAreUnaffected(t *testing.T) {
 	mux := throttleTestServer(t, 3)
 
 	for i := 0; i < 4; i++ {
-		attemptLogin(mux, "Edgouille", "wrongpassword1")
+		attemptLogin(mux, "email@email.com", "wrongpassword1")
 	}
 
 	// A different username from the same address still gets a real answer,
 	// since the IP budget is nowhere near spent.
-	w := attemptLogin(mux, "Bystander", "wrongpassword1")
+	w := attemptLogin(mux, "bystander@example.com", "wrongpassword1")
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("a different account got status code = %v, want = %v", w.Code, http.StatusUnauthorized)
 	}

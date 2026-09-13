@@ -31,18 +31,6 @@ func (r *UserRepository) Create(ctx context.Context, u *user.User) error {
 	return nil
 }
 
-func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*user.User, error) {
-	db := r.db.WithContext(ctx)
-
-	var record records.UserRecord
-	if err := db.First(&record, "username = ?", username).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperror.NotFound("user not found", err)
-		}
-	}
-	return recordToUser(record), nil
-}
-
 func (r *UserRepository) GetById(ctx context.Context, id string) (*user.User, error) {
 	db := r.db.WithContext(ctx)
 

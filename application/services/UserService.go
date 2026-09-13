@@ -107,7 +107,7 @@ func (service *UserService) Login(ctx context.Context, loginDTO requests.LoginRe
 		return nil, err
 	}
 
-	u, err := service.userRepository.GetByUsername(ctx, loginDTO.Username)
+	u, err := service.userRepository.GetByEmail(ctx, loginDTO.Email)
 	if err != nil {
 		return nil, apperror.Unauthorized("invalid credentials", err)
 	}
