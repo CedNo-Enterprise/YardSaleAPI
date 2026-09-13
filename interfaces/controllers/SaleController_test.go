@@ -2,11 +2,14 @@ package controllers
 
 import (
 	"GarageSaleAPI/application/services"
+	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/infrastructure/persistence/memory"
 	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/interfaces/requests"
+	"GarageSaleAPI/interfaces/responses"
 	"GarageSaleAPI/test"
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -127,15 +130,6 @@ func TestSaleController_getSale(t *testing.T) {
 		wantBody       string
 	}{
 		{
-			name: "Get valid sale",
-			args: args{
-				w: httptest.NewRecorder(),
-				r: test.CreateRequestWithPathParam(http.MethodGet, "/sale/", nil, "id", *saleId),
-			},
-			wantStatusCode: http.StatusOK,
-			wantBody:       `{"name":"Best sale in the east","address":{"line1":"northern","city":"Washington","state":"WS","postal_code":"U1A 2C5","country":"US","latitude":0,"longitude":0}}` + "\n",
-		},
-		{
 			name: "Get nonexistent sale",
 			args: args{
 				w: httptest.NewRecorder(),
@@ -157,6 +151,40 @@ func TestSaleController_getSale(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("Get valid sale", func(t *testing.T) {
+		w := httptest.NewRecorder()
+
+		controller.getSale(w, test.CreateRequestWithPathParam(http.MethodGet, "/sale/", nil, "id", *saleId))
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("getSale() got status code = %v, want = %v", w.Code, http.StatusOK)
+		}
+
+		var response responses.SaleResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("decoding body %q: %v", w.Body.String(), err)
+		}
+
+		if response.Id != *saleId {
+			t.Errorf("getSale() id = %q, want %q", response.Id, *saleId)
+		}
+		if response.SellerId != saleToAdd.SellerId {
+			t.Errorf("getSale() seller_id = %q, want %q", response.SellerId, saleToAdd.SellerId)
+		}
+		if response.Name != "Best sale in the east" {
+			t.Errorf("getSale() name = %q, want %q", response.Name, "Best sale in the east")
+		}
+		if response.Status != sale.StatusScheduled {
+			t.Errorf("getSale() status = %q, want %q", response.Status, sale.StatusScheduled)
+		}
+		if response.Address.City != "Washington" {
+			t.Errorf("getSale() address.city = %q, want %q", response.Address.City, "Washington")
+		}
+		if response.Items == nil {
+			t.Errorf("getSale() items = null, want an empty list")
+		}
+	})
 }
 
 func TestSaleController_addSale_rejectedRequestWritesOneResponse(t *testing.T) {

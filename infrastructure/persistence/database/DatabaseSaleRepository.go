@@ -116,7 +116,7 @@ func (r *SaleRepository) Search(ctx context.Context, criteria sale.SearchCriteri
 	var saleRecords []records.SaleRecord
 	err := query.
 		Order(orderClause(criteria.Sort)).
-		Limit(criteria.Limit).
+		Limit(criteria.FetchLimit()).
 		Offset(criteria.Offset).
 		Find(&saleRecords).Error
 	if err != nil {

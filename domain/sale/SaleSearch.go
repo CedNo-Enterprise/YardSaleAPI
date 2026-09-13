@@ -28,6 +28,20 @@ type SearchCriteria struct {
 	Sort     SortOrder
 	Limit    int
 	Offset   int
+	// Probe asks for one row beyond Limit so a caller can tell whether another
+	// page exists without paying for a second count query. It is kept separate
+	// from Limit so normalizing the criteria cannot clamp the extra row away on
+	// a full-sized page.
+	Probe bool
+}
+
+// FetchLimit is how many rows a repository should actually read.
+func (c SearchCriteria) FetchLimit() int {
+	if c.Probe {
+		return c.Limit + 1
+	}
+
+	return c.Limit
 }
 
 // DefaultSearchStatuses leaves out cancelled sales. Browse is a discovery
@@ -97,7 +111,7 @@ func Apply(sales []Sale, c SearchCriteria) []Sale {
 		return []Sale{}
 	}
 
-	end := min(c.Offset+c.Limit, len(matched))
+	end := min(c.Offset+c.FetchLimit(), len(matched))
 
 	return matched[c.Offset:end]
 }

@@ -2,8 +2,11 @@ package interfaces
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 const maxRequestBodyBytes = 1048576
@@ -54,4 +57,50 @@ func WriteResponse(w http.ResponseWriter, response any, status int, contentType 
 	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(status)
 	Encode(w, response)
+}
+
+// QueryInt reads an optional integer query parameter. An absent parameter is nil
+// rather than zero, so a handler can tell "not asked for" from "asked for 0".
+func QueryInt(r *http.Request, key string) (*int, error) {
+	raw := r.URL.Query().Get(key)
+	if raw == "" {
+		return nil, nil
+	}
+
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return nil, fmt.Errorf("%s must be a whole number: %w", key, err)
+	}
+
+	return &value, nil
+}
+
+// QueryTime reads an optional RFC 3339 timestamp query parameter.
+func QueryTime(r *http.Request, key string) (*time.Time, error) {
+	raw := r.URL.Query().Get(key)
+	if raw == "" {
+		return nil, nil
+	}
+
+	value, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return nil, fmt.Errorf("%s must be an RFC 3339 timestamp: %w", key, err)
+	}
+
+	return &value, nil
+}
+
+// QueryStrings reads a repeatable query parameter, dropping empty values so a
+// trailing "&status=" cannot turn into a filter that matches nothing.
+func QueryStrings(r *http.Request, key string) []string {
+	raw := r.URL.Query()[key]
+
+	values := make([]string, 0, len(raw))
+	for _, value := range raw {
+		if value != "" {
+			values = append(values, value)
+		}
+	}
+
+	return values
 }
