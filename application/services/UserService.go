@@ -5,6 +5,7 @@ import (
 	"GarageSaleAPI/domain/user"
 	"GarageSaleAPI/interfaces/requests"
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 	"unsafe"
@@ -57,6 +58,10 @@ func (service *UserService) AddUser(ctx context.Context, userDTO requests.UserRe
 }
 
 func (service *UserService) GetUserById(ctx context.Context, id string) (*user.User, error) {
+	if err := requireUuid(id, "user not found"); err != nil {
+		return nil, err
+	}
+
 	u, err := service.userRepository.GetById(ctx, id)
 	if err != nil {
 		slog.Error("Error getting user by id", "id", id, "err", err.Error())
@@ -109,6 +114,12 @@ func (service *UserService) Login(ctx context.Context, loginDTO requests.LoginRe
 
 	u, err := service.userRepository.GetByEmail(ctx, loginDTO.Email)
 	if err != nil {
+		// Only a missing user is a credential failure. A lookup that failed for
+		// any other reason must not be reported as a bad password.
+		if appErr, ok := errors.AsType[*apperror.AppError](err); ok && appErr.Kind != apperror.KindNotFound {
+			slog.Error("error looking up user for login", "err", err.Error())
+			return nil, err
+		}
 		return nil, apperror.Unauthorized("invalid credentials", err)
 	}
 

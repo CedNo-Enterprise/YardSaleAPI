@@ -8,7 +8,7 @@ type ItineraryRequest struct {
 	Date           time.Time `json:"date"           validate:"required"`
 	StartLatitude  *float64  `json:"startLatitude"  validate:"omitempty,latitude"`
 	StartLongitude *float64  `json:"startLongitude" validate:"omitempty,longitude"`
-	SaleIds        []string  `json:"saleIds"        validate:"omitempty,max=50,unique,dive,required"`
+	SaleIds        []string  `json:"saleIds"        validate:"omitempty,max=50,unique,dive,uuid"`
 }
 
 // UpdateItineraryRequest uses pointers so a PATCH can tell "field absent" from
@@ -24,7 +24,7 @@ type UpdateItineraryRequest struct {
 }
 
 type AddStopRequest struct {
-	SaleId string `json:"saleId" validate:"required"`
+	SaleId string `json:"saleId" validate:"required,uuid"`
 }
 
 // ReorderStopsRequest carries the point to optimize from. Omitted coordinates

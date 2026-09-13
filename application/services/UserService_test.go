@@ -463,3 +463,51 @@ func TestUserService_Login_UsersSharingAUsernameCanBothLogIn(t *testing.T) {
 	require.NoError(t, err, "the second account should be able to log in")
 	assert.Equal(t, second.Id(), secondResult.User.Id(), "logged in as the wrong account")
 }
+
+type failingUserRepository struct {
+	err error
+}
+
+func (r failingUserRepository) Create(context.Context, *user.User) error { return r.err }
+
+func (r failingUserRepository) GetByEmail(context.Context, string) (*user.User, error) {
+	return nil, r.err
+}
+
+func (r failingUserRepository) GetById(context.Context, string) (*user.User, error) {
+	return nil, r.err
+}
+
+func TestUserService_Login_lookupFailureIsNotInvalidCredentials(t *testing.T) {
+	repo := failingUserRepository{err: apperror.Internal(fmt.Errorf("connection refused"))}
+	service := NewUserService(repo, NewTokenService([]byte("test-key"), time.Hour))
+	ctx := test.CreateTestContext(t)
+
+	_, err := service.Login(ctx, requests.LoginRequest{
+		Email:    "buyer@example.com",
+		Password: "correcthorsebattery",
+	})
+
+	test.AssertKind(t, err, apperror.KindInternal)
+}
+
+func TestUserService_Login_unknownUserIsInvalidCredentials(t *testing.T) {
+	service := NewUserService(&memory.InMemoryUserRepository{}, NewTokenService([]byte("test-key"), time.Hour))
+	ctx := test.CreateTestContext(t)
+
+	_, err := service.Login(ctx, requests.LoginRequest{
+		Email:    "nobody@example.com",
+		Password: "correcthorsebattery",
+	})
+
+	test.AssertKind(t, err, apperror.KindUnauthorized)
+}
+
+func TestUserService_GetUserById_malformedIdIsNotFound(t *testing.T) {
+	service := NewUserService(&memory.InMemoryUserRepository{}, NewTokenService([]byte("test-key"), time.Hour))
+	ctx := test.CreateTestContext(t)
+
+	_, err := service.GetUserById(ctx, "ghost")
+
+	test.AssertKind(t, err, apperror.KindNotFound)
+}

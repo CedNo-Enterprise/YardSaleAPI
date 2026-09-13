@@ -8,6 +8,7 @@ import (
 	"errors"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type ItineraryRepository struct {
@@ -169,15 +170,40 @@ func (r *ItineraryRepository) Delete(ctx context.Context, id string) error {
 func (r *ItineraryRepository) AddStop(ctx context.Context, s *itinerary.Stop) error {
 	db := r.db.WithContext(ctx)
 
-	record := itineraryStopToRecord(*s)
-	if err := db.Create(&record).Error; err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return apperror.Conflict("sale already in itinerary", err)
+	return db.Transaction(func(tx *gorm.DB) error {
+		// Lock the itinerary for the duration. Without it two concurrent adds
+		// both read the same highest position and write it twice, leaving the
+		// route with duplicate positions and an unstable order.
+		var locked records.ItineraryRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&locked, "id = ?", s.ItineraryId()).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return apperror.NotFound("itinerary not found", err)
+			}
+			return apperror.Internal(err)
 		}
-		return apperror.Internal(err)
-	}
 
-	return nil
+		// The position is assigned here, not by the caller, because only the
+		// holder of the lock can see the true end of the route.
+		var nextPosition int
+		if err := tx.Model(&records.ItineraryStopRecord{}).
+			Where("itinerary_id = ?", s.ItineraryId()).
+			Select(`COALESCE(MAX("position") + 1, 0)`).
+			Scan(&nextPosition).Error; err != nil {
+			return apperror.Internal(err)
+		}
+
+		record := itineraryStopToRecord(*s)
+		record.Position = nextPosition
+		if err := tx.Create(&record).Error; err != nil {
+			if errors.Is(err, gorm.ErrDuplicatedKey) {
+				return apperror.Conflict("sale already in itinerary", err)
+			}
+			return apperror.Internal(err)
+		}
+
+		return nil
+	})
 }
 
 func (r *ItineraryRepository) RemoveStop(ctx context.Context, itineraryId string, saleId string) error {

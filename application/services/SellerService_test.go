@@ -7,6 +7,7 @@ import (
 	"GarageSaleAPI/infrastructure/persistence/memory"
 	"GarageSaleAPI/test"
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -89,7 +90,8 @@ func TestSellerService_AddSeller(t *testing.T) {
 
 func TestSellerService_GetSellerById(t *testing.T) {
 	sellerRepo := &memory.InMemorySellerRepository{}
-	newSeller := seller.CreateSeller("1", "1", "username", time.Now())
+	addedSellerId := uuid.NewString()
+	newSeller := seller.CreateSeller(addedSellerId, uuid.NewString(), "username", time.Now())
 
 	type args struct {
 		ctx      context.Context
@@ -105,7 +107,7 @@ func TestSellerService_GetSellerById(t *testing.T) {
 			name: "Get added seller",
 			args: args{
 				ctx:      test.CreateTestContext(t),
-				sellerId: "1",
+				sellerId: addedSellerId,
 			},
 			want:    newSeller,
 			wantErr: false,
@@ -114,7 +116,7 @@ func TestSellerService_GetSellerById(t *testing.T) {
 			name: "Get non added seller",
 			args: args{
 				ctx:      test.CreateTestContext(t),
-				sellerId: "2",
+				sellerId: uuid.NewString(),
 			},
 			want:    nil,
 			wantErr: true,
@@ -146,7 +148,7 @@ func TestSellerService_GetSellerByUserId(t *testing.T) {
 		user.CreateUser(userId, "user", "password", "email@email.com", time.Now()),
 	)
 	sellerRepo := &memory.InMemorySellerRepository{}
-	newSeller := seller.CreateSeller("1", userId, "username", time.Now())
+	newSeller := seller.CreateSeller(uuid.NewString(), userId, "username", time.Now())
 
 	type args struct {
 		ctx    context.Context
@@ -193,4 +195,41 @@ func TestSellerService_GetSellerByUserId(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSellerService_malformedSellerIdIsNotFound(t *testing.T) {
+	service := NewSellerService(&memory.InMemorySellerRepository{}, &memory.InMemoryUserRepository{})
+	ctx := test.CreateTestContext(t)
+
+	_, err := service.GetSellerById(ctx, "ghost")
+
+	test.AssertKind(t, err, apperror.KindNotFound)
+}
+
+func TestSellerService_malformedUserIdIsNotFound(t *testing.T) {
+	service := NewSellerService(&memory.InMemorySellerRepository{}, &memory.InMemoryUserRepository{})
+	ctx := test.CreateTestContext(t)
+
+	_, err := service.GetSellerByUserId(ctx, "ghost")
+
+	test.AssertKind(t, err, apperror.KindNotFound)
+}
+
+func TestSellerService_AddSeller_lookupFailureIsNotInvalidUserId(t *testing.T) {
+	repo := failingUserRepository{err: apperror.Internal(errors.New("connection refused"))}
+	service := NewSellerService(&memory.InMemorySellerRepository{}, repo)
+	ctx := test.CreateTestContext(t)
+
+	_, err := service.AddSeller(ctx, uuid.NewString(), "username")
+
+	test.AssertKind(t, err, apperror.KindInternal)
+}
+
+func TestSellerService_AddSeller_unknownUserIsInvalidUserId(t *testing.T) {
+	service := NewSellerService(&memory.InMemorySellerRepository{}, &memory.InMemoryUserRepository{})
+	ctx := test.CreateTestContext(t)
+
+	_, err := service.AddSeller(ctx, uuid.NewString(), "username")
+
+	test.AssertKind(t, err, apperror.KindInvalid)
 }

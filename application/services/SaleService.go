@@ -60,6 +60,10 @@ func (service *SaleService) AddSale(ctx context.Context, saleDTO requests.SaleRe
 }
 
 func (service *SaleService) GetSaleById(ctx context.Context, saleId string) (*sale.Sale, error) {
+	if err := requireUuid(saleId, "sale not found"); err != nil {
+		return nil, err
+	}
+
 	s, err := service.saleRepository.GetById(ctx, saleId)
 	if err != nil {
 		slog.Error(err.Error())

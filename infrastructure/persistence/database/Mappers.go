@@ -38,6 +38,7 @@ func sellerToRecord(s *seller.Seller) records.SellerRecord {
 	return records.SellerRecord{
 		Id:        s.Id(),
 		UserId:    s.UserId(),
+		Name:      s.Name(),
 		CreatedAt: s.CreatedAt(),
 	}
 }

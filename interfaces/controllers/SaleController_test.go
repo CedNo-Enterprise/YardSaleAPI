@@ -38,7 +38,7 @@ func TestSaleController_addSale(t *testing.T) {
 					"POST",
 					"/sale",
 					bytes.NewBufferString(`{
-						"SellerId": "sellerId",
+						"SellerId": "11111111-1111-4111-8111-111111111111",
 						"Name": "New Sale on the Block!",
     					"Address": {"line1":"northern","city":"Washington","state":"WS","postal_code":"U1A 2C5","country":"US"},
 						"Date": "2026-07-06T19:28:00Z"

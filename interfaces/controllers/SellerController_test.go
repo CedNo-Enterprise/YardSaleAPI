@@ -9,6 +9,7 @@ import (
 	"GarageSaleAPI/test"
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -98,16 +99,16 @@ func TestSellerController_getSellerById(t *testing.T) {
 			name: "Get added seller by id",
 			args: args{
 				w: httptest.NewRecorder(),
-				r: test.CreateRequestWithPathParam("POST", "/seller/", nil, "id", "seller_id"),
+				r: test.CreateRequestWithPathParam("POST", "/seller/", nil, "id", addedSellerId),
 			},
 			wantStatusCode: http.StatusOK,
-			wantBody:       `{"id":"seller_id","name":"username","saved_addresses":[],"inventory":[]}` + "\n",
+			wantBody:       fmt.Sprintf(sellerBodyTemplate, addedSellerId),
 		},
 		{
 			name: "Get non-added seller by id",
 			args: args{
 				w: httptest.NewRecorder(),
-				r: test.CreateRequestWithPathParam("POST", "/seller/", nil, "id", "invalid_seller_id"),
+				r: test.CreateRequestWithPathParam("POST", "/seller/", nil, "id", uuid.NewString()),
 			},
 			wantStatusCode: http.StatusNotFound,
 			wantBody:       "seller not found" + "\n",
@@ -147,16 +148,16 @@ func TestSellerController_getSellerByUserId(t *testing.T) {
 			name: "Get added seller by user id",
 			args: args{
 				w: httptest.NewRecorder(),
-				r: test.CreateRequestWithPathParam("POST", "/seller/", nil, "userId", "username"),
+				r: test.CreateRequestWithPathParam("POST", "/seller/", nil, "userId", addedUserId),
 			},
 			wantStatusCode: http.StatusOK,
-			wantBody:       `{"id":"seller_id","name":"username","saved_addresses":[],"inventory":[]}` + "\n",
+			wantBody:       fmt.Sprintf(sellerBodyTemplate, addedSellerId),
 		},
 		{
 			name: "Get non-added seller by user id",
 			args: args{
 				w: httptest.NewRecorder(),
-				r: test.CreateRequestWithPathParam("POST", "/seller/", nil, "userId", "invalid_user_id"),
+				r: test.CreateRequestWithPathParam("POST", "/seller/", nil, "userId", uuid.NewString()),
 			},
 			wantStatusCode: http.StatusNotFound,
 			wantBody:       "seller not found" + "\n",
@@ -179,15 +180,22 @@ func TestSellerController_getSellerByUserId(t *testing.T) {
 	}
 }
 
+var (
+	addedSellerId = uuid.NewString()
+	addedUserId   = uuid.NewString()
+)
+
+const sellerBodyTemplate = "{\"id\":%q,\"name\":\"username\",\"saved_addresses\":[],\"inventory\":[]}\n"
+
 func setupGetSellerTests() *services.SellerService {
 	userRepo := &memory.InMemoryUserRepository{}
 	sellerRepo := &memory.InMemorySellerRepository{}
 	sellerService := services.NewSellerService(sellerRepo, userRepo)
 	_ = userRepo.Create(
 		context.Background(),
-		user.CreateUser(uuid.NewString(), "username", "password", "email@email.com", time.Now()),
+		user.CreateUser(addedUserId, "username", "password", "email@email.com", time.Now()),
 	)
-	addedSeller := seller.CreateSeller("seller_id", "username", "username", time.Now())
+	addedSeller := seller.CreateSeller(addedSellerId, addedUserId, "username", time.Now())
 	_ = sellerRepo.Create(context.Background(), addedSeller)
 
 	return sellerService
