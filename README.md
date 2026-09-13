@@ -23,8 +23,8 @@ It listens on `localhost:8080`.
 
 ## Test data
 
-`cmd/seed` fills the database with two users, a seller, seven Ottawa-area sales
-with real coordinates, and two itineraries:
+`cmd/seed` fills the database with two users, a seller, a buyer profile, eight
+Ottawa-area sales with real coordinates, and two itineraries:
 
 ```bash
 go run ./cmd/seed
@@ -34,8 +34,10 @@ It prints the credentials and ids it created. Every row uses a fixed id, so it i
 safe to re-run: it clears its own previous rows and leaves everything else alone.
 
 Both seeded users share the password `correcthorsebattery`. `buyer@example.com`
-owns the itineraries; `vendor@example.com` owns the sales, which makes it useful
-for checking that ownership is enforced.
+owns the itineraries and has a buyer profile; `vendor@example.com` owns the
+sales, which makes it useful for checking that ownership is enforced. The seeded
+sales are spread across dates and statuses — including one cancelled sale — so
+every `GET /sale` filter has something to bite on.
 
 One seeded sale is deliberately left ungeocoded, so you can see how an
 unlocatable stop is handled.
@@ -65,7 +67,11 @@ and returns `403` otherwise.
 | POST | `/seller` | yes | Become a seller |
 | GET | `/seller/{id}` | — | Fetch a seller |
 | GET | `/seller/user/{userId}` | — | Fetch a seller by user |
+| POST | `/buyer` | yes | Become a buyer |
+| GET | `/buyer/me` | yes | Fetch your buyer profile |
+| PATCH | `/buyer/me` | yes | Change your display name or home address |
 | POST | `/sale` | yes | Create a sale |
+| GET | `/sale` | — | Browse and search sales |
 | GET | `/sale/{id}` | — | Fetch a sale |
 | POST | `/itinerary` | yes | Create a route |
 | GET | `/itinerary` | yes | List your routes |
@@ -76,6 +82,69 @@ and returns `403` otherwise.
 | PATCH | `/itinerary/{id}/stop/{saleId}` | owner | Set a stop to planned/visited/skipped |
 | DELETE | `/itinerary/{id}/stop/{saleId}` | owner | Remove a stop |
 | PUT | `/itinerary/{id}/stops/order` | owner | Re-optimize from a start point |
+
+### Buyers
+
+Being a buyer is a role on your user, the same way being a seller is: one
+account, and a `buyers` row alongside the `sellers` one. A user can be both,
+either, or neither — nothing in the API requires a buyer profile to exist, so
+browsing and planning an itinerary work without one.
+
+```bash
+curl -X POST localhost:8080/buyer   -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN"   -d '{
+        "displayName": "Sam",
+        "homeAddress": {
+          "line1": "100 Bank St", "city": "Ottawa", "state": "ON",
+          "postal_code": "K1P 5N2", "country": "CA"
+        }
+      }'
+```
+
+The profile is addressed as `/buyer/me` rather than by id, unlike a seller. A
+seller's address is a sale location and public by nature; a buyer's home address
+is not. Making the token the only selector means there is no ownership check to
+get wrong. `PATCH /buyer/me` takes either field on its own; an empty patch is a
+`400` rather than a silent no-op, and a home address is replaced whole rather
+than field by field.
+
+One user gets one buyer profile — `buyers.user_id` is unique, so a second
+`POST /buyer` is a `409`.
+
+### Searching sales
+
+`GET /sale` is public and takes everything from the query string:
+
+```bash
+curl 'localhost:8080/sale?status=active&dateFrom=2026-09-19T00:00:00Z&limit=20'
+```
+
+| Parameter | Values | Default |
+|---|---|---|
+| `status` | `scheduled`, `active`, `completed`, `cancelled`; repeatable | everything except `cancelled` |
+| `dateFrom`, `dateTo` | RFC 3339 timestamps, both inclusive | unbounded |
+| `sort` | `date`, `-date`, `created` | `date` |
+| `limit` | 1–100 | 20 |
+| `offset` | 0 or more | 0 |
+
+Cancelled sales are left out unless you ask for them by name: browsing is for
+finding a sale to go to, and a cancelled one is not that. Ordering always breaks
+ties on id, so paging cannot show or skip a sale because two sales share a date.
+
+The response carries the page and whether another one follows:
+
+```json
+{ "sales": [ ... ], "limit": 20, "offset": 0, "has_more": true }
+```
+
+`has_more` comes from reading one row past the page, so there is no count query
+and no total in the response. A `limit` above 100 is clamped rather than
+refused; a `limit` below 1, a negative `offset`, an unknown `status` or `sort`,
+and a `dateTo` before `dateFrom` are all `400`.
+
+Search results are summaries and carry no `items` — nothing writes sale items
+yet, so the shape does not promise data that is not there. Filtering by city,
+by text, or by distance is not supported yet; distance in particular waits on
+geocoding, described below.
 
 ### Itineraries
 
