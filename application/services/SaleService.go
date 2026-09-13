@@ -3,6 +3,7 @@ package services
 import (
 	"GarageSaleAPI/application/server/apperror"
 	"GarageSaleAPI/domain/sale"
+	"GarageSaleAPI/domain/seller"
 	"GarageSaleAPI/interfaces/requests"
 	"context"
 	"log/slog"
@@ -13,11 +14,34 @@ import (
 )
 
 type SaleService struct {
-	saleRepository sale.SaleRepository
+	saleRepository   sale.SaleRepository
+	sellerRepository seller.SellerRepository
 }
 
-func NewSaleService(saleRepository sale.SaleRepository) *SaleService {
-	return &SaleService{saleRepository: saleRepository}
+func NewSaleService(saleRepository sale.SaleRepository, sellerRepository seller.SellerRepository) *SaleService {
+	return &SaleService{saleRepository: saleRepository, sellerRepository: sellerRepository}
+}
+
+// requireOwnedSeller asserts the caller is the seller they are listing a sale
+// for. The seller id arrives in the request body, so without this any
+// authenticated user could create a sale under anyone else's name.
+func (service *SaleService) requireOwnedSeller(ctx context.Context, sellerId string, userId string) error {
+	if err := requireUuid(sellerId, "seller not found"); err != nil {
+		return err
+	}
+
+	s, err := service.sellerRepository.GetById(ctx, sellerId)
+	if err != nil {
+		return err
+	}
+
+	// Sellers are publicly readable, so the seller's existence is not a secret
+	// and a truthful 403 leaks nothing a masking 404 would hide.
+	if s.UserId() != userId {
+		return apperror.Forbidden("seller does not belong to user", nil)
+	}
+
+	return nil
 }
 
 // SaleSearchResult is one page of a browse query. Limit and Offset echo what was
@@ -40,9 +64,16 @@ func validateSale(saleDTO requests.SaleRequest) error {
 	return nil
 }
 
-func (service *SaleService) AddSale(ctx context.Context, saleDTO requests.SaleRequest) (*string, error) {
+func (service *SaleService) AddSale(
+	ctx context.Context, userId string, saleDTO requests.SaleRequest,
+) (*string, error) {
 	err := validateSale(saleDTO)
 	if err != nil {
+		slog.Error("error adding sale", "err", err.Error())
+		return nil, err
+	}
+
+	if err = service.requireOwnedSeller(ctx, saleDTO.SellerId, userId); err != nil {
 		slog.Error("error adding sale", "err", err.Error())
 		return nil, err
 	}

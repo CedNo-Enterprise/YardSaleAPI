@@ -3,6 +3,7 @@ package controllers
 import (
 	"GarageSaleAPI/application/services"
 	"GarageSaleAPI/domain/sale"
+	"GarageSaleAPI/domain/seller"
 	"GarageSaleAPI/infrastructure/persistence/memory"
 	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/interfaces/requests"
@@ -18,10 +19,32 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestSaleController_addSale(t *testing.T) {
-	repo := &memory.InMemorySaleRepository{}
+const (
+	saleSellerId      = "11111111-1111-4111-8111-111111111111"
+	saleSellerUserId  = "22222222-2222-4222-8222-222222222222"
+	saleStrangerUsrId = "33333333-3333-4333-8333-333333333333"
+)
+
+func newSaleControllerWithSeller(t *testing.T) (*SaleController, *services.SaleService) {
+	t.Helper()
+
+	sellerRepo := &memory.InMemorySellerRepository{}
+	owner := seller.CreateSeller(saleSellerId, saleSellerUserId, "seedvendor", time.Now())
+	if err := sellerRepo.Create(test.CreateTestContext(t), owner); err != nil {
+		t.Fatalf("seeding seller: %v", err)
+	}
+
+	service := services.NewSaleService(&memory.InMemorySaleRepository{}, sellerRepo)
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
-	controller := *NewSaleController(services.NewSaleService(repo), interfaces.NewAuthenticationMiddleware(tokenService, services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})))
+	authMiddleware := interfaces.NewAuthenticationMiddleware(
+		tokenService, services.NewSessionService(&memory.InMemoryRevokedTokenRepository{}),
+	)
+
+	return NewSaleController(service, authMiddleware), service
+}
+
+func TestSaleController_addSale(t *testing.T) {
+	controller, _ := newSaleControllerWithSeller(t)
 
 	type args struct {
 		w      *httptest.ResponseRecorder
@@ -47,11 +70,48 @@ func TestSaleController_addSale(t *testing.T) {
 						"Date": "2026-07-06T19:28:00Z"
 					}`),
 					"application/json"),
+				userId: saleSellerUserId,
 			},
 			wantStatusCode: http.StatusCreated,
 		},
 		{
-			name: "Add valid sale",
+			name: "Add sale under a seller the caller does not own",
+			args: args{
+				w: httptest.NewRecorder(),
+				r: test.CreateRequest(
+					"POST",
+					"/sale",
+					bytes.NewBufferString(`{
+						"SellerId": "11111111-1111-4111-8111-111111111111",
+						"Name": "Sale under someone else's name",
+    					"Address": {"line1":"northern","city":"Washington","state":"WS","postal_code":"U1A 2C5","country":"US"},
+						"Date": "2026-07-06T19:28:00Z"
+					}`),
+					"application/json"),
+				userId: saleStrangerUsrId,
+			},
+			wantStatusCode: http.StatusForbidden,
+		},
+		{
+			name: "Add sale under a seller that does not exist",
+			args: args{
+				w: httptest.NewRecorder(),
+				r: test.CreateRequest(
+					"POST",
+					"/sale",
+					bytes.NewBufferString(`{
+						"SellerId": "99999999-9999-4999-8999-999999999999",
+						"Name": "Sale with no seller",
+    					"Address": {"line1":"northern","city":"Washington","state":"WS","postal_code":"U1A 2C5","country":"US"},
+						"Date": "2026-07-06T19:28:00Z"
+					}`),
+					"application/json"),
+				userId: saleSellerUserId,
+			},
+			wantStatusCode: http.StatusNotFound,
+		},
+		{
+			name: "Add sale with wrong content type",
 			args: args{
 				w: httptest.NewRecorder(),
 				r: test.CreateRequest(
@@ -95,13 +155,10 @@ func TestSaleController_addSale(t *testing.T) {
 }
 
 func TestSaleController_getSale(t *testing.T) {
-	repo := &memory.InMemorySaleRepository{}
-	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
-	service := services.NewSaleService(repo)
-	controller := *NewSaleController(service, interfaces.NewAuthenticationMiddleware(tokenService, services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})))
+	controller, service := newSaleControllerWithSeller(t)
 
 	saleToAdd := requests.SaleRequest{
-		SellerId: uuid.NewString(),
+		SellerId: saleSellerId,
 		Name:     "Best sale in the east",
 		Address: requests.AddressRequest{
 			Line1:      "northern",
@@ -114,7 +171,7 @@ func TestSaleController_getSale(t *testing.T) {
 		Date: time.Now(),
 	}
 	ctx := test.CreateTestContext(t)
-	saleId, err := service.AddSale(ctx, saleToAdd)
+	saleId, err := service.AddSale(ctx, saleSellerUserId, saleToAdd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,14 +269,7 @@ func TestSaleController_addSale_rejectedRequestWritesOneResponse(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := &memory.InMemorySaleRepository{}
-			tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
-			controller := NewSaleController(
-				services.NewSaleService(repo),
-				interfaces.NewAuthenticationMiddleware(
-					tokenService, services.NewSessionService(&memory.InMemoryRevokedTokenRepository{}),
-				),
-			)
+			controller, _ := newSaleControllerWithSeller(t)
 
 			w := httptest.NewRecorder()
 			r := test.CreateRequest(http.MethodPost, "/sale", bytes.NewBufferString(tt.body), tt.contentType)

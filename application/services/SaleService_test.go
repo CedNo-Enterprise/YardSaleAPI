@@ -4,6 +4,7 @@ import (
 	"GarageSaleAPI/application/server/apperror"
 	"GarageSaleAPI/domain/address"
 	"GarageSaleAPI/domain/sale"
+	"GarageSaleAPI/domain/seller"
 	"GarageSaleAPI/infrastructure/persistence/memory"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/test"
@@ -28,11 +29,39 @@ var validAddress = address.CreateAddress(
 	"Washington", "WS", "U1A 2C5", "US",
 )
 
-func TestSaleService_AddSale(t *testing.T) {
-	repo := &memory.InMemorySaleRepository{}
+const (
+	saleOwnerUserId = "cccccccc-0000-4000-8000-000000000001"
+	saleOwnerId     = "cccccccc-0000-4000-8000-000000000002"
+	otherUserId     = "cccccccc-0000-4000-8000-000000000003"
+	absentSellerId  = "cccccccc-0000-4000-8000-00000000dead"
+	saleOwnerName   = "seedvendor"
+)
 
+func newSaleServiceWithSeller(t *testing.T) (*SaleService, *memory.InMemorySaleRepository) {
+	t.Helper()
+
+	saleRepo := &memory.InMemorySaleRepository{}
+	sellerRepo := &memory.InMemorySellerRepository{}
+	owner := seller.CreateSeller(saleOwnerId, saleOwnerUserId, saleOwnerName, time.Now())
+	if err := sellerRepo.Create(test.CreateTestContext(t), owner); err != nil {
+		t.Fatalf("seeding seller: %v", err)
+	}
+
+	return NewSaleService(saleRepo, sellerRepo), saleRepo
+}
+
+func ownedSaleRequest() requests.SaleRequest {
+	return requests.SaleRequest{
+		SellerId: saleOwnerId,
+		Name:     "Best sale in the east",
+		Address:  validAddressRequest,
+		Date:     time.Now(),
+	}
+}
+
+func TestSaleService_AddSale(t *testing.T) {
 	type args struct {
-		service *SaleService
+		userId  string
 		saleDTO requests.SaleRequest
 	}
 	tests := []struct {
@@ -44,20 +73,15 @@ func TestSaleService_AddSale(t *testing.T) {
 		{
 			name: "add valid sale",
 			args: args{
-				service: NewSaleService(repo),
-				saleDTO: requests.SaleRequest{
-					SellerId: uuid.NewString(),
-					Name:     "Best sale in the east",
-					Address:  validAddressRequest,
-					Date:     time.Now(),
-				},
+				userId:  saleOwnerUserId,
+				saleDTO: ownedSaleRequest(),
 			},
 			wantErr: false,
 		},
 		{
 			name: "add invalid sale",
 			args: args{
-				service: NewSaleService(repo),
+				userId: saleOwnerUserId,
 				saleDTO: requests.SaleRequest{
 					Name:    "",
 					Address: validAddressRequest,
@@ -66,12 +90,36 @@ func TestSaleService_AddSale(t *testing.T) {
 			wantErr:     true,
 			wantErrKind: apperror.KindInvalid,
 		},
+		{
+			name: "add sale under a seller the caller does not own",
+			args: args{
+				userId:  otherUserId,
+				saleDTO: ownedSaleRequest(),
+			},
+			wantErr:     true,
+			wantErrKind: apperror.KindForbidden,
+		},
+		{
+			name: "add sale under a seller that does not exist",
+			args: args{
+				userId: saleOwnerUserId,
+				saleDTO: requests.SaleRequest{
+					SellerId: absentSellerId,
+					Name:     "Best sale in the east",
+					Address:  validAddressRequest,
+					Date:     time.Now(),
+				},
+			},
+			wantErr:     true,
+			wantErrKind: apperror.KindNotFound,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := test.CreateTestContext(t)
+			service, _ := newSaleServiceWithSeller(t)
 
-			_, err := tt.args.service.AddSale(ctx, tt.args.saleDTO)
+			_, err := service.AddSale(ctx, tt.args.userId, tt.args.saleDTO)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("AddSale() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -104,7 +152,7 @@ func TestSaleService_GetSaleById(t *testing.T) {
 		{
 			name: "Get sale by id",
 			args: args{
-				service: NewSaleService(repo),
+				service: NewSaleService(repo, &memory.InMemorySellerRepository{}),
 				saleId:  saleId,
 			},
 			want:    newSale,
@@ -113,7 +161,7 @@ func TestSaleService_GetSaleById(t *testing.T) {
 		{
 			name: "Get nonexistent sale by id",
 			args: args{
-				service: NewSaleService(repo),
+				service: NewSaleService(repo, &memory.InMemorySellerRepository{}),
 				saleId:  "123",
 			},
 			wantErr: true,
@@ -205,7 +253,7 @@ func Test_validateSale(t *testing.T) {
 }
 
 func TestSaleService_malformedSaleIdIsNotFound(t *testing.T) {
-	service := NewSaleService(&memory.InMemorySaleRepository{})
+	service := NewSaleService(&memory.InMemorySaleRepository{}, &memory.InMemorySellerRepository{})
 	ctx := test.CreateTestContext(t)
 
 	_, err := service.GetSaleById(ctx, "ghost")
@@ -214,10 +262,10 @@ func TestSaleService_malformedSaleIdIsNotFound(t *testing.T) {
 }
 
 func TestSaleService_malformedSellerIdIsInvalid(t *testing.T) {
-	service := NewSaleService(&memory.InMemorySaleRepository{})
+	service := NewSaleService(&memory.InMemorySaleRepository{}, &memory.InMemorySellerRepository{})
 	ctx := test.CreateTestContext(t)
 
-	_, err := service.AddSale(ctx, requests.SaleRequest{
+	_, err := service.AddSale(ctx, saleOwnerUserId, requests.SaleRequest{
 		SellerId: "ghost",
 		Name:     "Best sale in the east",
 		Address:  validAddressRequest,
