@@ -21,20 +21,20 @@ var DefaultBackoff = []time.Duration{
 }
 
 type LoginThrottleService struct {
-	attempts       loginattempt.AttemptStore
-	usernamePolicy Policy
-	ipPolicy       Policy
-	backoff        []time.Duration
-	now            func() time.Time
+	attempts    loginattempt.AttemptStore
+	emailPolicy Policy
+	ipPolicy    Policy
+	backoff     []time.Duration
+	now         func() time.Time
 }
 
-func NewLoginThrottleService(attempts loginattempt.AttemptStore, usernamePolicy Policy, ipPolicy Policy) *LoginThrottleService {
+func NewLoginThrottleService(attempts loginattempt.AttemptStore, emailPolicy Policy, ipPolicy Policy) *LoginThrottleService {
 	return &LoginThrottleService{
-		attempts:       attempts,
-		usernamePolicy: usernamePolicy,
-		ipPolicy:       ipPolicy,
-		backoff:        DefaultBackoff,
-		now:            time.Now,
+		attempts:    attempts,
+		emailPolicy: emailPolicy,
+		ipPolicy:    ipPolicy,
+		backoff:     DefaultBackoff,
+		now:         time.Now,
 	}
 }
 
@@ -45,7 +45,7 @@ func (service *LoginThrottleService) withClock(now func() time.Time) *LoginThrot
 	return service
 }
 
-func usernameKey(username string) string { return "user:" + username }
+func emailKey(email string) string { return "email:" + email }
 
 func ipKey(ip string) string { return "ip:" + ip }
 
@@ -53,11 +53,11 @@ func ipKey(ip string) string { return "ip:" + ip }
 // reports how long the caller should wait. It must be consulted before the
 // password is verified: bcrypt costs hundreds of milliseconds, so letting a
 // blocked attempt reach it would defeat the point.
-func (service *LoginThrottleService) Check(ip string, username string) (time.Duration, bool) {
+func (service *LoginThrottleService) Check(ip string, email string) (time.Duration, bool) {
 	now := service.now()
 
 	var retryAfter time.Duration
-	for _, key := range []string{usernameKey(username), ipKey(ip)} {
+	for _, key := range []string{emailKey(email), ipKey(ip)} {
 		attempts, found := service.attempts.Get(key)
 		if !found {
 			continue
@@ -77,8 +77,8 @@ func (service *LoginThrottleService) Check(ip string, username string) (time.Dur
 	return 0, true
 }
 
-func (service *LoginThrottleService) RecordFailure(ip string, username string) {
-	service.recordFailure(usernameKey(username), service.usernamePolicy)
+func (service *LoginThrottleService) RecordFailure(ip string, email string) {
+	service.recordFailure(emailKey(email), service.emailPolicy)
 	service.recordFailure(ipKey(ip), service.ipPolicy)
 }
 
@@ -99,8 +99,8 @@ func (service *LoginThrottleService) recordFailure(key string, policy Policy) {
 
 // RecordSuccess clears both budgets. Proving you know the password retires the
 // offense count with them, so a user's occasional typos never accumulate.
-func (service *LoginThrottleService) RecordSuccess(ip string, username string) {
-	service.attempts.Delete(usernameKey(username))
+func (service *LoginThrottleService) RecordSuccess(ip string, email string) {
+	service.attempts.Delete(emailKey(email))
 	service.attempts.Delete(ipKey(ip))
 }
 

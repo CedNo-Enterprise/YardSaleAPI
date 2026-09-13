@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddUser(t *testing.T) {
@@ -335,7 +336,7 @@ func Test_validateLogin(t *testing.T) {
 			name: "valid login request",
 			args: args{
 				loginDTO: requests.LoginRequest{
-					Username: "username",
+					Email:    "email@email.com",
 					Password: "validpassword",
 				},
 			},
@@ -345,7 +346,7 @@ func Test_validateLogin(t *testing.T) {
 			name: "invalid login request",
 			args: args{
 				loginDTO: requests.LoginRequest{
-					Username: "username",
+					Email:    "email@email.com",
 					Password: "p",
 				},
 			},
@@ -390,7 +391,7 @@ func TestUserService_Login(t *testing.T) {
 			args: args{
 				context.Background(),
 				requests.LoginRequest{
-					Username: "username",
+					Email:    "email@email.com",
 					Password: "validPassword",
 				},
 			},
@@ -405,7 +406,7 @@ func TestUserService_Login(t *testing.T) {
 			args: args{
 				context.Background(),
 				requests.LoginRequest{
-					Username: "username",
+					Email:    "email@email.com",
 					Password: "invalidPassword",
 				},
 			},
@@ -427,4 +428,38 @@ func TestUserService_Login(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Usernames are deliberately not unique, so identifying an account by one is
+// ambiguous: whichever row the repository happened to return would be the only
+// account able to log in. Authenticating by email keeps both usable.
+//
+// Both accounts share a password on purpose. Under a username lookup both
+// logins would have succeeded and returned the same id, so the ids are what
+// prove each caller reached their own account.
+func TestUserService_Login_UsersSharingAUsernameCanBothLogIn(t *testing.T) {
+	const (
+		password = "MDP!@#111111111"
+		// bcrypt hash of the password above, precomputed to keep the test off
+		// the ~600ms cost of hashing at cost 14.
+		hash = "$2a$14$/IhjU2PxRypamw1kLypfIeB28u32sgVtTL2EvCl8Ar.sUlPk77drO"
+	)
+
+	ctx := context.Background()
+	userRepo := &memory.InMemoryUserRepository{}
+	service := NewUserService(userRepo, NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour))
+
+	first := user.CreateUser(uuid.NewString(), "sharedname", hash, "first@example.com", time.Now())
+	require.NoError(t, userRepo.Create(ctx, first))
+
+	second := user.CreateUser(uuid.NewString(), "sharedname", hash, "second@example.com", time.Now())
+	require.NoError(t, userRepo.Create(ctx, second))
+
+	firstResult, err := service.Login(ctx, requests.LoginRequest{Email: "first@example.com", Password: password})
+	require.NoError(t, err, "the first account should be able to log in")
+	assert.Equal(t, first.Id(), firstResult.User.Id(), "logged in as the wrong account")
+
+	secondResult, err := service.Login(ctx, requests.LoginRequest{Email: "second@example.com", Password: password})
+	require.NoError(t, err, "the second account should be able to log in")
+	assert.Equal(t, second.Id(), secondResult.User.Id(), "logged in as the wrong account")
 }

@@ -31,11 +31,11 @@ func main() {
 	}
 }
 
-// Login throttling budgets. Per-username catches one account ground from many
+// Login throttling budgets. Per-email catches one account ground from many
 // addresses; per-IP catches one address spraying many accounts.
 var (
-	usernameLoginPolicy = services.Policy{Limit: 10, Window: 15 * time.Minute}
-	ipLoginPolicy       = services.Policy{Limit: 30, Window: 15 * time.Minute}
+	emailLoginPolicy = services.Policy{Limit: 10, Window: 15 * time.Minute}
+	ipLoginPolicy    = services.Policy{Limit: 30, Window: 15 * time.Minute}
 )
 
 func initAppState(mux *http.ServeMux) {
@@ -53,7 +53,7 @@ func initAppState(mux *http.ServeMux) {
 	authMiddleware := interfaces.NewAuthenticationMiddleware(tokenService, sessionService)
 
 	attemptStore := ratelimit.NewInMemoryAttemptStore(ratelimit.DefaultMaxEntries)
-	loginThrottle := services.NewLoginThrottleService(attemptStore, usernameLoginPolicy, ipLoginPolicy)
+	loginThrottle := services.NewLoginThrottleService(attemptStore, emailLoginPolicy, ipLoginPolicy)
 
 	userService := services.NewUserService(*s.GetUserRepository(), tokenService)
 	userController := controllers.NewUserController(userService, sessionService, loginThrottle, authMiddleware)

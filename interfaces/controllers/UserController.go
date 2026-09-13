@@ -87,7 +87,7 @@ func (controller *UserController) login(w http.ResponseWriter, r *http.Request) 
 	clientIP := clientIPOf(r)
 
 	// Checked before Login, so a blocked attempt never reaches bcrypt.
-	if retryAfter, allowed := controller.loginThrottle.Check(clientIP, loginDTO.Username); !allowed {
+	if retryAfter, allowed := controller.loginThrottle.Check(clientIP, loginDTO.Email); !allowed {
 		respondTooManyRequests(w, retryAfter)
 		return
 	}
@@ -97,13 +97,13 @@ func (controller *UserController) login(w http.ResponseWriter, r *http.Request) 
 		// Only credential failures count against the budget. A malformed or
 		// invalid request is a client mistake, not a guess.
 		if appErr, ok := errors.AsType[*apperror.AppError](err); ok && appErr.Kind == apperror.KindUnauthorized {
-			controller.loginThrottle.RecordFailure(clientIP, loginDTO.Username)
+			controller.loginThrottle.RecordFailure(clientIP, loginDTO.Email)
 		}
 		server.WriteError(w, err)
 		return
 	}
 
-	controller.loginThrottle.RecordSuccess(clientIP, loginDTO.Username)
+	controller.loginThrottle.RecordSuccess(clientIP, loginDTO.Email)
 
 	response := responses.NewLoginResponse(&result.AccessToken, &result.ExpiresAt, &result.User)
 	interfaces.WriteResponse(w, response, http.StatusOK, "application/json")
