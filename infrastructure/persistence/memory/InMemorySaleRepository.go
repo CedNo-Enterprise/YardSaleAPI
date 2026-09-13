@@ -56,3 +56,13 @@ func (repo *InMemorySaleRepository) GetByIds(ctx context.Context, ids []string) 
 
 	return found, nil
 }
+
+// Search defers to the domain so the double and the database repository cannot
+// drift apart on what a criterion means.
+func (repo *InMemorySaleRepository) Search(ctx context.Context, criteria sale.SearchCriteria) ([]sale.Sale, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	return sale.Apply(repo.saleList, criteria), nil
+}

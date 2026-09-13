@@ -94,3 +94,54 @@ func (r *SaleRepository) GetByIds(ctx context.Context, ids []string) ([]sale.Sal
 
 	return sales, nil
 }
+
+func (r *SaleRepository) Search(ctx context.Context, criteria sale.SearchCriteria) ([]sale.Sale, error) {
+	criteria = criteria.Normalize()
+
+	db := r.db.WithContext(ctx)
+
+	statuses := make([]string, 0, len(criteria.Statuses))
+	for _, status := range criteria.Statuses {
+		statuses = append(statuses, string(status))
+	}
+
+	query := db.Model(&records.SaleRecord{}).Preload("Address").Where("status IN ?", statuses)
+	if criteria.DateFrom != nil {
+		query = query.Where("date >= ?", *criteria.DateFrom)
+	}
+	if criteria.DateTo != nil {
+		query = query.Where("date <= ?", *criteria.DateTo)
+	}
+
+	var saleRecords []records.SaleRecord
+	err := query.
+		Order(orderClause(criteria.Sort)).
+		Limit(criteria.Limit).
+		Offset(criteria.Offset).
+		Find(&saleRecords).Error
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+
+	// Items are left empty on purpose: no browse response shows them, so loading
+	// them would be a second query per page for data nobody reads.
+	sales := make([]sale.Sale, len(saleRecords))
+	for i, rec := range saleRecords {
+		sales[i] = *recordToSale(rec, []sale.SaleItem{})
+	}
+
+	return sales, nil
+}
+
+// orderClause spells a sort order as SQL. Every order breaks ties on id so two
+// requests for the same page cannot disagree about where the boundary falls.
+func orderClause(order sale.SortOrder) string {
+	switch order {
+	case sale.SortDateReverse:
+		return "date DESC, id ASC"
+	case sale.SortCreated:
+		return "created_at DESC, id ASC"
+	default:
+		return "date ASC, id ASC"
+	}
+}
