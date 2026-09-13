@@ -8,17 +8,28 @@ import (
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/interfaces/responses"
 	"encoding/json"
+	"errors"
+	"math"
+	"net"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 type UserController struct {
 	userService    *services.UserService
 	sessionService *services.SessionService
+	loginThrottle  *services.LoginThrottleService
 	authMiddleware *interfaces.AuthMiddleware
 }
 
-func NewUserController(userService *services.UserService, sessionService *services.SessionService, authMiddleware *interfaces.AuthMiddleware) *UserController {
-	return &UserController{userService, sessionService, authMiddleware}
+func NewUserController(
+	userService *services.UserService,
+	sessionService *services.SessionService,
+	loginThrottle *services.LoginThrottleService,
+	authMiddleware *interfaces.AuthMiddleware,
+) *UserController {
+	return &UserController{userService, sessionService, loginThrottle, authMiddleware}
 }
 
 func (controller *UserController) AddUserHandlersToMux(mux *http.ServeMux) {
@@ -73,14 +84,50 @@ func (controller *UserController) login(w http.ResponseWriter, r *http.Request) 
 	var loginDTO requests.LoginRequest
 	interfaces.Decode(w, decoder, &loginDTO)
 
+	clientIP := clientIPOf(r)
+
+	// Checked before Login, so a blocked attempt never reaches bcrypt.
+	if retryAfter, allowed := controller.loginThrottle.Check(clientIP, loginDTO.Username); !allowed {
+		respondTooManyRequests(w, retryAfter)
+		return
+	}
+
 	result, err := controller.userService.Login(r.Context(), loginDTO)
 	if err != nil {
+		// Only credential failures count against the budget. A malformed or
+		// invalid request is a client mistake, not a guess.
+		if appErr, ok := errors.AsType[*apperror.AppError](err); ok && appErr.Kind == apperror.KindUnauthorized {
+			controller.loginThrottle.RecordFailure(clientIP, loginDTO.Username)
+		}
 		server.WriteError(w, err)
 		return
 	}
 
+	controller.loginThrottle.RecordSuccess(clientIP, loginDTO.Username)
+
 	response := responses.NewLoginResponse(&result.AccessToken, &result.ExpiresAt, &result.User)
 	interfaces.WriteResponse(w, response, http.StatusOK, "application/json")
+}
+
+// clientIPOf reports the address the request came from. X-Forwarded-For is
+// deliberately ignored: trusting it without a proxy allowlist would let a
+// caller spoof a fresh address per request and shed the per-IP budget.
+func clientIPOf(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
+func respondTooManyRequests(w http.ResponseWriter, retryAfter time.Duration) {
+	seconds := int(math.Ceil(retryAfter.Seconds()))
+	if seconds < 1 {
+		seconds = 1
+	}
+
+	w.Header().Set("Retry-After", strconv.Itoa(seconds))
+	interfaces.WriteResponse(w, map[string]string{"error": "too many login attempts"}, http.StatusTooManyRequests, "application/json")
 }
 
 func (controller *UserController) logout(w http.ResponseWriter, r *http.Request, _ string) {

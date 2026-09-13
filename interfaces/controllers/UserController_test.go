@@ -6,6 +6,7 @@ import (
 	"GarageSaleAPI/domain/token"
 	"GarageSaleAPI/domain/user"
 	"GarageSaleAPI/infrastructure/persistence/memory"
+	"GarageSaleAPI/infrastructure/ratelimit"
 	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/test"
 	"bytes"
@@ -15,6 +16,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -30,7 +32,7 @@ func Test_addUser(t *testing.T) {
 	repo := &memory.InMemoryUserRepository{}
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
 	sessionService := services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})
-	controller := *NewUserController(services.NewUserService(repo, tokenService), sessionService, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
+	controller := *NewUserController(services.NewUserService(repo, tokenService), sessionService, testLoginThrottle(), interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
 
 	tests := []struct {
 		name       string
@@ -107,7 +109,7 @@ func Test_getUser(t *testing.T) {
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
 	sessionService := services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})
 	service := services.NewUserService(userRepo, tokenService)
-	controller := *NewUserController(service, sessionService, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
+	controller := *NewUserController(service, sessionService, testLoginThrottle(), interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
 	creationTime := time.Now()
 	userId := uuid.NewString()
 	userToAdd := user.CreateUser(userId, "Edgouille", "MDP!@#111111111", "email@email.com", creationTime)
@@ -165,7 +167,7 @@ func TestUserController_login(t *testing.T) {
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
 	sessionService := services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})
 	service := services.NewUserService(userRepo, tokenService)
-	controller := *NewUserController(service, sessionService, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
+	controller := *NewUserController(service, sessionService, testLoginThrottle(), interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
 	creationTime := time.Now()
 	userToAdd := user.CreateUser(
 		uuid.NewString(),
@@ -241,7 +243,7 @@ func logoutTestServer(t *testing.T) (*http.ServeMux, *services.TokenService) {
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
 	sessionService := services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})
 	service := services.NewUserService(userRepo, tokenService)
-	controller := NewUserController(service, sessionService, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
+	controller := NewUserController(service, sessionService, testLoginThrottle(), interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
 
 	mux := http.NewServeMux()
 	controller.AddUserHandlersToMux(mux)
@@ -368,7 +370,7 @@ func TestUserController_logout_RevocationFailureIsNotReportedAsSuccess(t *testin
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
 	sessionService := services.NewSessionService(brokenRevokedTokenRepository{})
 	service := services.NewUserService(&memory.InMemoryUserRepository{}, tokenService)
-	controller := NewUserController(service, sessionService, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
+	controller := NewUserController(service, sessionService, testLoginThrottle(), interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
 
 	mux := http.NewServeMux()
 	controller.AddUserHandlersToMux(mux)
@@ -396,7 +398,7 @@ func TestUserController_logout_UserCanLogInAgain(t *testing.T) {
 	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
 	sessionService := services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})
 	service := services.NewUserService(userRepo, tokenService)
-	controller := NewUserController(service, sessionService, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
+	controller := NewUserController(service, sessionService, testLoginThrottle(), interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
 
 	mux := http.NewServeMux()
 	controller.AddUserHandlersToMux(mux)
@@ -472,4 +474,137 @@ func extractToken(t *testing.T, loginBody string) string {
 		t.Fatal("login response carried no token")
 	}
 	return response.Token
+}
+
+// testLoginThrottle builds a throttle with the production budgets, generous
+// enough that the tests which are not about throttling never trip it.
+func testLoginThrottle() *services.LoginThrottleService {
+	return services.NewLoginThrottleService(
+		ratelimit.NewInMemoryAttemptStore(ratelimit.DefaultMaxEntries),
+		services.Policy{Limit: 10, Window: 15 * time.Minute},
+		services.Policy{Limit: 30, Window: 15 * time.Minute},
+	)
+}
+
+// throttleTestServer wires a login-capable mux with a tight username budget, so
+// the throttling tests trip it in a few attempts instead of ten.
+func throttleTestServer(t *testing.T, usernameLimit int) *http.ServeMux {
+	t.Helper()
+
+	ctx := test.CreateTestContext(t)
+	userRepo := &memory.InMemoryUserRepository{}
+	tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+	sessionService := services.NewSessionService(&memory.InMemoryRevokedTokenRepository{})
+	throttle := services.NewLoginThrottleService(
+		ratelimit.NewInMemoryAttemptStore(ratelimit.DefaultMaxEntries),
+		services.Policy{Limit: usernameLimit, Window: 15 * time.Minute},
+		services.Policy{Limit: 1000, Window: 15 * time.Minute},
+	)
+	service := services.NewUserService(userRepo, tokenService)
+	controller := NewUserController(service, sessionService, throttle, interfaces.NewAuthenticationMiddleware(tokenService, sessionService))
+
+	// bcrypt hash of "MDP!@#111111111"
+	userToAdd := user.CreateUser(
+		uuid.NewString(),
+		"Edgouille",
+		"$2a$14$/IhjU2PxRypamw1kLypfIeB28u32sgVtTL2EvCl8Ar.sUlPk77drO",
+		"email@email.com",
+		time.Now())
+	if err := userRepo.Create(ctx, userToAdd); err != nil {
+		t.Fatal(err.Error())
+	}
+
+	mux := http.NewServeMux()
+	controller.AddUserHandlersToMux(mux)
+
+	return mux
+}
+
+func attemptLogin(mux *http.ServeMux, username string, password string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, test.CreateRequest(
+		http.MethodPost,
+		"/login",
+		bytes.NewBufferString(fmt.Sprintf(`{"Username":%q,"Password":%q}`, username, password)),
+		"application/json",
+	))
+	return w
+}
+
+func TestUserController_login_BlocksAfterTooManyFailures(t *testing.T) {
+	mux := throttleTestServer(t, 3)
+
+	for i := 1; i <= 3; i++ {
+		w := attemptLogin(mux, "Edgouille", "wrongpassword1")
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("attempt %d got status code = %v, want = %v", i, w.Code, http.StatusUnauthorized)
+		}
+	}
+
+	blocked := attemptLogin(mux, "Edgouille", "wrongpassword1")
+	if blocked.Code != http.StatusTooManyRequests {
+		t.Fatalf("the attempt past the limit got status code = %v, want = %v", blocked.Code, http.StatusTooManyRequests)
+	}
+
+	retryAfter := blocked.Header().Get("Retry-After")
+	seconds, err := strconv.Atoi(retryAfter)
+	if err != nil {
+		t.Fatalf("Retry-After = %q, want whole seconds", retryAfter)
+	}
+	if seconds < 1 || seconds > 60 {
+		t.Errorf("Retry-After = %d, want the first offense's one-minute block", seconds)
+	}
+}
+
+// The throttle has to run before the password is checked, or it does nothing
+// about the ~607ms bcrypt cost that makes login a denial-of-service vector.
+func TestUserController_login_BlockedEvenWithTheCorrectPassword(t *testing.T) {
+	mux := throttleTestServer(t, 3)
+
+	for i := 0; i < 3; i++ {
+		attemptLogin(mux, "Edgouille", "wrongpassword1")
+	}
+
+	w := attemptLogin(mux, "Edgouille", "MDP!@#111111111")
+
+	if w.Code != http.StatusTooManyRequests {
+		t.Errorf("a blocked user with the right password got status code = %v, want = %v", w.Code, http.StatusTooManyRequests)
+	}
+}
+
+func TestUserController_login_SuccessClearsTheBudget(t *testing.T) {
+	mux := throttleTestServer(t, 3)
+
+	// Two failures, then a success, then two more failures must not trip a
+	// limit of three.
+	for i := 0; i < 2; i++ {
+		attemptLogin(mux, "Edgouille", "wrongpassword1")
+	}
+
+	ok := attemptLogin(mux, "Edgouille", "MDP!@#111111111")
+	if ok.Code != http.StatusOK {
+		t.Fatalf("login got status code = %v, want = %v", ok.Code, http.StatusOK)
+	}
+
+	for i := 1; i <= 2; i++ {
+		w := attemptLogin(mux, "Edgouille", "wrongpassword1")
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("failure %d after a success got status code = %v, want = %v", i, w.Code, http.StatusUnauthorized)
+		}
+	}
+}
+
+func TestUserController_login_OtherAccountsAreUnaffected(t *testing.T) {
+	mux := throttleTestServer(t, 3)
+
+	for i := 0; i < 4; i++ {
+		attemptLogin(mux, "Edgouille", "wrongpassword1")
+	}
+
+	// A different username from the same address still gets a real answer,
+	// since the IP budget is nowhere near spent.
+	w := attemptLogin(mux, "Bystander", "wrongpassword1")
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("a different account got status code = %v, want = %v", w.Code, http.StatusUnauthorized)
+	}
 }
