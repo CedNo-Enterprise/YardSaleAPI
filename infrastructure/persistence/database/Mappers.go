@@ -2,6 +2,7 @@ package database
 
 import (
 	"GarageSaleAPI/domain/address"
+	"GarageSaleAPI/domain/buyer"
 	"GarageSaleAPI/domain/itinerary"
 	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/domain/seller"
@@ -41,6 +42,31 @@ func sellerToRecord(s *seller.Seller) records.SellerRecord {
 		Name:      s.Name(),
 		CreatedAt: s.CreatedAt(),
 	}
+}
+
+func buyerToRecord(b *buyer.Buyer) records.BuyerRecord {
+	record := records.BuyerRecord{
+		Id:          b.Id(),
+		UserId:      b.UserId(),
+		DisplayName: b.DisplayName(),
+		CreatedAt:   b.CreatedAt(),
+	}
+
+	if home := b.HomeAddress(); home != nil && home.Id() != 0 {
+		id := home.Id()
+		record.HomeAddressId = &id
+	}
+
+	return record
+}
+
+func recordToBuyer(r records.BuyerRecord) *buyer.Buyer {
+	var home *address.Address
+	if r.HomeAddress != nil {
+		home = recordToAddress(*r.HomeAddress)
+	}
+
+	return buyer.HydrateBuyer(r.Id, r.UserId, r.DisplayName, home, r.CreatedAt)
 }
 
 func addressToRecord(a address.Address) records.AddressRecord {
