@@ -2,7 +2,6 @@ package services
 
 import (
 	"GarageSaleAPI/application/server/apperror"
-	"GarageSaleAPI/domain/address"
 	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/interfaces/requests"
 	"context"
@@ -38,11 +37,7 @@ func (service *SaleService) AddSale(ctx context.Context, saleDTO requests.SaleRe
 		return nil, err
 	}
 
-	saleAddress := address.CreateAddress(
-		saleDTO.Address.Line1, &saleDTO.Address.Line2,
-		saleDTO.Address.City, saleDTO.Address.State, saleDTO.Address.PostalCode,
-		saleDTO.Address.Country,
-	)
+	saleAddress := addressFromRequest(saleDTO.Address)
 
 	saleId := uuid.NewString()
 	s := sale.CreateSale(

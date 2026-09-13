@@ -67,6 +67,10 @@ func initAppState(mux *http.ServeMux) {
 	sellerController := controllers.NewSellerController(sellerService, authMiddleware)
 	sellerController.AddSalesHandlersToMux(mux)
 
+	buyerService := services.NewBuyerService(*s.GetBuyerRepository(), *s.GetUserRepository())
+	buyerController := controllers.NewBuyerController(buyerService, authMiddleware)
+	buyerController.AddBuyerHandlersToMux(mux)
+
 	itineraryService := services.NewItineraryService(*s.GetItineraryRepository(), *s.GetSaleRepository())
 	itineraryController := controllers.NewItineraryController(itineraryService, authMiddleware)
 	itineraryController.AddItineraryHandlersToMux(mux)

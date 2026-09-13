@@ -1,6 +1,7 @@
 package server
 
 import (
+	"GarageSaleAPI/domain/buyer"
 	"GarageSaleAPI/domain/itinerary"
 	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/domain/seller"
@@ -15,6 +16,7 @@ type AppServer struct {
 	userRepository         user.UserRepository
 	saleRepository         sale.SaleRepository
 	sellerRepository       seller.SellerRepository
+	buyerRepository        buyer.BuyerRepository
 	revokedTokenRepository token.RevokedTokenRepository
 	itineraryRepository    itinerary.ItineraryRepository
 }
@@ -24,6 +26,7 @@ func NewAppServer(db *gorm.DB) *AppServer {
 		userRepository:         database.NewUserRepository(db),
 		saleRepository:         database.NewSaleRepository(db),
 		sellerRepository:       database.NewSellerRepository(db),
+		buyerRepository:        database.NewBuyerRepository(db),
 		revokedTokenRepository: database.NewRevokedTokenRepository(db),
 		itineraryRepository:    database.NewItineraryRepository(db),
 	}
@@ -39,6 +42,10 @@ func (server *AppServer) GetSaleRepository() *sale.SaleRepository {
 
 func (server *AppServer) GetSellerRepository() *seller.SellerRepository {
 	return &server.sellerRepository
+}
+
+func (server *AppServer) GetBuyerRepository() *buyer.BuyerRepository {
+	return &server.buyerRepository
 }
 
 func (server *AppServer) GetRevokedTokenRepository() *token.RevokedTokenRepository {
