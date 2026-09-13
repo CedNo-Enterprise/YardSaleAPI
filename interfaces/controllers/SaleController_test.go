@@ -158,3 +158,50 @@ func TestSaleController_getSale(t *testing.T) {
 		})
 	}
 }
+
+func TestSaleController_addSale_rejectedRequestWritesOneResponse(t *testing.T) {
+	tests := []struct {
+		name           string
+		body           string
+		contentType    string
+		wantStatusCode int
+		wantBody       string
+	}{
+		{
+			name:           "wrong content type",
+			body:           `{"sellerId":"s","name":"Sale","address":{},"date":"2026-07-06T19:28:00Z"}`,
+			contentType:    "text/plain",
+			wantStatusCode: http.StatusUnsupportedMediaType,
+			wantBody:       "invalid content type\n",
+		},
+		{
+			name:           "malformed body",
+			body:           `{"name": `,
+			contentType:    "application/json",
+			wantStatusCode: http.StatusBadRequest,
+			wantBody:       "bad request body\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &memory.InMemorySaleRepository{}
+			tokenService := services.NewTokenService([]byte("f81d4fae-7dec-11d0-a765-00a0c91e6bf6"), 24*time.Hour)
+			controller := NewSaleController(
+				services.NewSaleService(repo),
+				interfaces.NewAuthenticationMiddleware(
+					tokenService, services.NewSessionService(&memory.InMemoryRevokedTokenRepository{}),
+				),
+			)
+
+			w := httptest.NewRecorder()
+			r := test.CreateRequest(http.MethodPost, "/sale", bytes.NewBufferString(tt.body), tt.contentType)
+
+			controller.addSale(w, r, uuid.NewString())
+
+			test.ValidateExpectedCodeAndBody(w, t, tt.wantStatusCode, tt.wantBody)
+			if w.Header().Get("Location") != "" {
+				t.Errorf("a rejected request set a Location header")
+			}
+		})
+	}
+}

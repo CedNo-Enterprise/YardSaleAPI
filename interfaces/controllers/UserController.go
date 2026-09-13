@@ -7,7 +7,6 @@ import (
 	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/interfaces/responses"
-	"encoding/json"
 	"errors"
 	"math"
 	"net"
@@ -40,15 +39,10 @@ func (controller *UserController) AddUserHandlersToMux(mux *http.ServeMux) {
 }
 
 func (controller *UserController) addUser(w http.ResponseWriter, r *http.Request) {
-	interfaces.ValidateContentType(w, r, "application/json")
-
-	requestBody := http.MaxBytesReader(w, r.Body, 1048576)
-
-	decoder := json.NewDecoder(requestBody)
-	decoder.DisallowUnknownFields()
-
 	var userDTO requests.UserRequest
-	interfaces.Decode(w, decoder, &userDTO)
+	if !interfaces.DecodeBody(w, r, &userDTO) {
+		return
+	}
 
 	err := controller.userService.AddUser(r.Context(), userDTO)
 	if err != nil {
@@ -74,15 +68,10 @@ func (controller *UserController) getUser(w http.ResponseWriter, r *http.Request
 }
 
 func (controller *UserController) login(w http.ResponseWriter, r *http.Request) {
-	interfaces.ValidateContentType(w, r, "application/json")
-
-	requestBody := http.MaxBytesReader(w, r.Body, 1048576)
-
-	decoder := json.NewDecoder(requestBody)
-	decoder.DisallowUnknownFields()
-
 	var loginDTO requests.LoginRequest
-	interfaces.Decode(w, decoder, &loginDTO)
+	if !interfaces.DecodeBody(w, r, &loginDTO) {
+		return
+	}
 
 	clientIP := clientIPOf(r)
 

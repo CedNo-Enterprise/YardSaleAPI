@@ -2,7 +2,7 @@ package interfaces
 
 import (
 	"GarageSaleAPI/test"
-	"encoding/json"
+	"bytes"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -14,36 +14,118 @@ type placeholder struct {
 	name string
 }
 
-func Test_givenValidBody_whenDecode_thenReturnOk(t *testing.T) {
-	w := httptest.NewRecorder()
-	_, err := w.Write([]byte(`{"name": "GarageSaleAPI"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	decoder := json.NewDecoder(w.Body)
-	var p placeholder
-
-	Decode(w, decoder, &p)
-
-	expectedCode := http.StatusOK
-	expectedBody := ""
-
-	test.ValidateExpectedCodeAndBody(w, t, expectedCode, expectedBody)
+type decodeTarget struct {
+	Name string `json:"name"`
 }
 
-func Test_givenInvalidBody_whenDecode_thenReturnsBadRequest(t *testing.T) {
+func TestDecodeBody(t *testing.T) {
+	type args struct {
+		body        string
+		contentType string
+	}
+	tests := []struct {
+		name         string
+		args         args
+		wantContinue bool
+		wantCode     int
+		wantBody     string
+		wantName     string
+	}{
+		{
+			name:         "valid body",
+			args:         args{body: `{"name": "GarageSaleAPI"}`, contentType: "application/json"},
+			wantContinue: true,
+			wantCode:     http.StatusOK,
+			wantBody:     "",
+			wantName:     "GarageSaleAPI",
+		},
+		{
+			name:         "wrong content type",
+			args:         args{body: `{"name": "GarageSaleAPI"}`, contentType: "multipart/form-data"},
+			wantContinue: false,
+			wantCode:     http.StatusUnsupportedMediaType,
+			wantBody:     "invalid content type\n",
+		},
+		{
+			name:         "missing content type",
+			args:         args{body: `{"name": "GarageSaleAPI"}`, contentType: ""},
+			wantContinue: false,
+			wantCode:     http.StatusUnsupportedMediaType,
+			wantBody:     "invalid content type\n",
+		},
+		{
+			name:         "malformed body",
+			args:         args{body: `{"name": `, contentType: "application/json"},
+			wantContinue: false,
+			wantCode:     http.StatusBadRequest,
+			wantBody:     "bad request body\n",
+		},
+		{
+			name:         "empty body",
+			args:         args{body: "", contentType: "application/json"},
+			wantContinue: false,
+			wantCode:     http.StatusBadRequest,
+			wantBody:     "bad request body\n",
+		},
+		{
+			name:         "unknown field",
+			args:         args{body: `{"nmae": "typo"}`, contentType: "application/json"},
+			wantContinue: false,
+			wantCode:     http.StatusBadRequest,
+			wantBody:     "bad request body\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			r := test.CreateRequest(http.MethodPost, "/", strings.NewReader(tt.args.body), tt.args.contentType)
+
+			var target decodeTarget
+			got := DecodeBody(w, r, &target)
+
+			if got != tt.wantContinue {
+				t.Errorf("DecodeBody() = %v, want %v", got, tt.wantContinue)
+			}
+			test.ValidateExpectedCodeAndBody(w, t, tt.wantCode, tt.wantBody)
+			if tt.wantContinue && target.Name != tt.wantName {
+				t.Errorf("decoded Name = %q, want %q", target.Name, tt.wantName)
+			}
+		})
+	}
+}
+
+func TestDecodeBody_oversizedBody(t *testing.T) {
 	w := httptest.NewRecorder()
+	oversized := `{"name": "` + strings.Repeat("x", maxRequestBodyBytes+1) + `"}`
+	r := test.CreateRequest(http.MethodPost, "/", strings.NewReader(oversized), "application/json")
 
-	decoder := json.NewDecoder(w.Body)
-	var p placeholder
+	var target decodeTarget
+	if DecodeBody(w, r, &target) {
+		t.Errorf("DecodeBody() = true, want false for an oversized body")
+	}
+	test.ValidateExpectedCodeAndBody(w, t, http.StatusBadRequest, "bad request body\n")
+}
 
-	Decode(w, decoder, &p)
+func TestDecodeBody_guardStopsTheHandler(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := test.CreateRequest(http.MethodPost, "/", bytes.NewBufferString(`{"name": "x"}`), "text/plain")
 
-	expectedCode := http.StatusBadRequest
-	expectedBody := "bad request body\n"
+	handlerRan := false
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		var target decodeTarget
+		if !DecodeBody(w, r, &target) {
+			return
+		}
+		handlerRan = true
+		WriteResponse(w, target, http.StatusCreated, "application/json")
+	}
 
-	test.ValidateExpectedCodeAndBody(w, t, expectedCode, expectedBody)
+	handler(w, r)
+
+	if handlerRan {
+		t.Errorf("handler continued past a rejected body")
+	}
+	test.ValidateExpectedCodeAndBody(w, t, http.StatusUnsupportedMediaType, "invalid content type\n")
 }
 
 func Test_givenValidObject_whenMarshal_thenReturnOk(t *testing.T) {
@@ -64,40 +146,6 @@ func Test_givenInvalidObject_whenMarshal_thenReturnBadRequest(t *testing.T) {
 
 	expectedCode := http.StatusInternalServerError
 	expectedBody := "internal server error\n"
-
-	test.ValidateExpectedCodeAndBody(w, t, expectedCode, expectedBody)
-}
-
-func Test_givenMatchingContentType_whenValidateContentType_thenReturnOk(t *testing.T) {
-	w := httptest.NewRecorder()
-	req, err := http.NewRequest(http.MethodGet, "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	ValidateContentType(w, req, "application/json")
-
-	expectedCode := http.StatusOK
-	expectedBody := ""
-
-	test.ValidateExpectedCodeAndBody(w, t, expectedCode, expectedBody)
-}
-
-func Test_givenNonMatchingContentType_whenValidateContentType_thenReturnOk(t *testing.T) {
-	w := httptest.NewRecorder()
-	req, err := http.NewRequest(http.MethodGet, "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	ValidateContentType(w, req, "multipart/form-data")
-
-	expectedCode := http.StatusUnsupportedMediaType
-	expectedBody := "invalid content type\n"
 
 	test.ValidateExpectedCodeAndBody(w, t, expectedCode, expectedBody)
 }

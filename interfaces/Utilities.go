@@ -6,13 +6,28 @@ import (
 	"net/http"
 )
 
-func Decode(w http.ResponseWriter, decoder *json.Decoder, v any) {
-	err := decoder.Decode(v)
-	if err != nil {
+const maxRequestBodyBytes = 1048576
+
+// DecodeBody validates the content type and decodes the JSON body, reporting
+// whether the handler should continue. It writes the error response itself, so
+// a caller that ignores the result would carry on past a rejected request and
+// write a second status — always guard on the return value.
+func DecodeBody(w http.ResponseWriter, r *http.Request, v any) bool {
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "invalid content type", http.StatusUnsupportedMediaType)
+		return false
+	}
+
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBodyBytes))
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(v); err != nil {
 		slog.Error("Error parsing request body", "err", err)
 		http.Error(w, "bad request body", http.StatusBadRequest)
-		return
+		return false
 	}
+
+	return true
 }
 
 func Encode(w http.ResponseWriter, v any) {
@@ -29,14 +44,6 @@ func Marshal(w http.ResponseWriter, v any) {
 	if err != nil {
 		slog.Error("Error marshalling %T", v)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-}
-
-func ValidateContentType(w http.ResponseWriter, r *http.Request, t string) {
-	contentType := r.Header.Get("Content-Type")
-	if contentType != t {
-		http.Error(w, "invalid content type", http.StatusUnsupportedMediaType)
 		return
 	}
 }

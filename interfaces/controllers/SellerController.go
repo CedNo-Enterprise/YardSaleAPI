@@ -6,7 +6,6 @@ import (
 	"GarageSaleAPI/interfaces"
 	"GarageSaleAPI/interfaces/requests"
 	"GarageSaleAPI/interfaces/responses"
-	"encoding/json"
 	"net/http"
 )
 
@@ -26,15 +25,10 @@ func (controller *SellerController) AddSalesHandlersToMux(mux *http.ServeMux) {
 }
 
 func (controller *SellerController) addSeller(w http.ResponseWriter, r *http.Request, userId string) {
-	interfaces.ValidateContentType(w, r, "application/json")
-
-	requestBody := http.MaxBytesReader(w, r.Body, 1048576)
-
-	decoder := json.NewDecoder(requestBody)
-	decoder.DisallowUnknownFields()
-
 	var sellerDTO requests.SellerRequest
-	interfaces.Decode(w, decoder, &sellerDTO)
+	if !interfaces.DecodeBody(w, r, &sellerDTO) {
+		return
+	}
 
 	sellerId, err := controller.sellerService.AddSeller(r.Context(), userId, sellerDTO.Username)
 	if err != nil {

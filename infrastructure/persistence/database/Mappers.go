@@ -2,6 +2,7 @@ package database
 
 import (
 	"GarageSaleAPI/domain/address"
+	"GarageSaleAPI/domain/itinerary"
 	"GarageSaleAPI/domain/sale"
 	"GarageSaleAPI/domain/seller"
 	"GarageSaleAPI/domain/token"
@@ -122,4 +123,37 @@ func saleItemToRecord(saleID string, i sale.SaleItem) records.SaleItemRecord {
 
 func recordToSaleItem(r records.SaleItemRecord) *sale.SaleItem {
 	return sale.HydrateSaleItem(r.Id, r.SaleId, r.InventoryItemId, r.Name, r.Price, sale.SaleItemStatus(r.Status))
+}
+
+func itineraryToRecord(i *itinerary.Itinerary) records.ItineraryRecord {
+	return records.ItineraryRecord{
+		Id:             i.Id(),
+		UserId:         i.UserId(),
+		Name:           i.Name(),
+		Description:    i.Description(),
+		Date:           i.Date(),
+		StartLatitude:  i.StartLatitude(),
+		StartLongitude: i.StartLongitude(),
+		CreatedAt:      i.CreatedAt(),
+	}
+}
+
+func recordToItinerary(r records.ItineraryRecord, stops []itinerary.Stop) *itinerary.Itinerary {
+	return itinerary.HydrateItinerary(
+		r.Id, r.UserId, r.Name, r.Description, r.Date,
+		r.StartLatitude, r.StartLongitude, stops, r.CreatedAt,
+	)
+}
+
+func itineraryStopToRecord(s itinerary.Stop) records.ItineraryStopRecord {
+	return records.ItineraryStopRecord{
+		ItineraryId: s.ItineraryId(),
+		SaleId:      s.SaleId(),
+		Position:    s.Position(),
+		Status:      string(s.Status()),
+	}
+}
+
+func recordToItineraryStop(r records.ItineraryStopRecord) itinerary.Stop {
+	return itinerary.HydrateStop(r.ItineraryId, r.SaleId, r.Position, itinerary.StopStatus(r.Status))
 }

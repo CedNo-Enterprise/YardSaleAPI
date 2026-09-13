@@ -67,6 +67,10 @@ func initAppState(mux *http.ServeMux) {
 	sellerController := controllers.NewSellerController(sellerService, authMiddleware)
 	sellerController.AddSalesHandlersToMux(mux)
 
+	itineraryService := services.NewItineraryService(*s.GetItineraryRepository(), *s.GetSaleRepository())
+	itineraryController := controllers.NewItineraryController(itineraryService, authMiddleware)
+	itineraryController.AddItineraryHandlersToMux(mux)
+
 	startRevokedTokenCleanup(revokedTokens, time.Hour)
 	startLoginAttemptCleanup(attemptStore, 5*time.Minute)
 }
