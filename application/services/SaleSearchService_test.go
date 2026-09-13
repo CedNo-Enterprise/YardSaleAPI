@@ -28,7 +28,7 @@ func newSearchService(t *testing.T, sales ...*sale.Sale) *SaleService {
 		}
 	}
 
-	return NewSaleService(repo)
+	return NewSaleService(repo, &memory.InMemorySellerRepository{})
 }
 
 func seededSale(id string, day int, status sale.Status) *sale.Sale {

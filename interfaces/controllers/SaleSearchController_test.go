@@ -50,7 +50,7 @@ func newSearchController(t *testing.T) *SaleController {
 		tokenService, services.NewSessionService(&memory.InMemoryRevokedTokenRepository{}),
 	)
 
-	return NewSaleController(services.NewSaleService(repo), authMiddleware)
+	return NewSaleController(services.NewSaleService(repo, &memory.InMemorySellerRepository{}), authMiddleware)
 }
 
 func searchSales(t *testing.T, controller *SaleController, query string) *httptest.ResponseRecorder {

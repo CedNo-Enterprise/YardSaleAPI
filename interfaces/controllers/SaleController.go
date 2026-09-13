@@ -31,7 +31,7 @@ func (controller *SaleController) addSale(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	saleId, err := controller.saleService.AddSale(r.Context(), saleDTO)
+	saleId, err := controller.saleService.AddSale(r.Context(), userId, saleDTO)
 	if err != nil {
 		server.WriteError(w, err)
 		return

@@ -59,7 +59,7 @@ func initAppState(mux *http.ServeMux) {
 	userController := controllers.NewUserController(userService, sessionService, loginThrottle, authMiddleware)
 	userController.AddUserHandlersToMux(mux)
 
-	saleService := services.NewSaleService(*s.GetSaleRepository())
+	saleService := services.NewSaleService(*s.GetSaleRepository(), *s.GetSellerRepository())
 	saleController := controllers.NewSaleController(saleService, authMiddleware)
 	saleController.AddSalesHandlersToMux(mux)
 

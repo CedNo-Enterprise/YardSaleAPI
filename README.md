@@ -55,8 +55,10 @@ repositories themselves; those are exercised by running the API against Postgres
 ## API
 
 Authenticated routes take `Authorization: Bearer <token>` from `POST /login`.
-Reads are public; everything that changes an itinerary is restricted to its owner
-and returns `403` otherwise.
+Reads are public; writes are restricted to the owner of the thing being changed
+and return `403` otherwise. That means an itinerary can only be changed by the
+user it belongs to, and a sale can only be created under a seller the caller
+owns — the `sellerId` in the body is checked against the token, not trusted.
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
@@ -70,7 +72,7 @@ and returns `403` otherwise.
 | POST | `/buyer` | yes | Become a buyer |
 | GET | `/buyer/me` | yes | Fetch your buyer profile |
 | PATCH | `/buyer/me` | yes | Change your display name or home address |
-| POST | `/sale` | yes | Create a sale |
+| POST | `/sale` | owner | Create a sale under a seller you own |
 | GET | `/sale` | — | Browse and search sales |
 | GET | `/sale/{id}` | — | Fetch a sale |
 | POST | `/itinerary` | yes | Create a route |
