@@ -203,3 +203,26 @@ func Test_validateSale(t *testing.T) {
 		})
 	}
 }
+
+func TestSaleService_malformedSaleIdIsNotFound(t *testing.T) {
+	service := NewSaleService(&memory.InMemorySaleRepository{})
+	ctx := test.CreateTestContext(t)
+
+	_, err := service.GetSaleById(ctx, "ghost")
+
+	test.AssertKind(t, err, apperror.KindNotFound)
+}
+
+func TestSaleService_malformedSellerIdIsInvalid(t *testing.T) {
+	service := NewSaleService(&memory.InMemorySaleRepository{})
+	ctx := test.CreateTestContext(t)
+
+	_, err := service.AddSale(ctx, requests.SaleRequest{
+		SellerId: "ghost",
+		Name:     "Best sale in the east",
+		Address:  validAddressRequest,
+		Date:     time.Now(),
+	})
+
+	test.AssertKind(t, err, apperror.KindInvalid)
+}

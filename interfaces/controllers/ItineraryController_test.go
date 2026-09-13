@@ -11,6 +11,7 @@ import (
 	"GarageSaleAPI/test"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -18,6 +19,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+)
+
+const (
+	nearSale   = "aaaaaaaa-0000-4000-8000-000000000001"
+	middleSale = "aaaaaaaa-0000-4000-8000-000000000002"
+	farSale    = "aaaaaaaa-0000-4000-8000-000000000003"
+	extraSale  = "aaaaaaaa-0000-4000-8000-000000000004"
+	absentSale = "aaaaaaaa-0000-4000-8000-00000000dead"
 )
 
 func itineraryRequest(method string, target string, body string, pathValues map[string]string) *http.Request {
@@ -43,7 +52,7 @@ func newItineraryController(t *testing.T) (*ItineraryController, *services.Itine
 	itineraryRepo := &memory.InMemoryItineraryRepository{}
 	saleRepo := &memory.InMemorySaleRepository{}
 
-	for saleId, latitude := range map[string]float64{"near": 45.1, "middle": 45.2, "far": 45.3} {
+	for saleId, latitude := range map[string]float64{nearSale: 45.1, middleSale: 45.2, farSale: 45.3} {
 		saleAddress := address.CreateAddress("northern", nil, "Washington", "WS", "U1A 2C5", "US")
 		saleAddress.AddLatLong(latitude, -75.0)
 		s := sale.CreateSale(
@@ -73,7 +82,7 @@ func seedItinerary(t *testing.T, service *services.ItineraryService, userId stri
 		Date:           time.Now(),
 		StartLatitude:  &[]float64{45.0}[0],
 		StartLongitude: &[]float64{-75.0}[0],
-		SaleIds:        []string{"far", "near", "middle"},
+		SaleIds:        []string{farSale, nearSale, middleSale},
 	})
 	if err != nil {
 		t.Fatalf("seeding itinerary: %v", err)
@@ -94,13 +103,13 @@ func decodeItinerary(t *testing.T, w *httptest.ResponseRecorder) responses.Itine
 }
 
 func TestItineraryController_addItinerary(t *testing.T) {
-	validBody := `{
+	validBody := fmt.Sprintf(`{
 		"name": "Saturday run",
 		"date": "2026-09-19T08:00:00Z",
 		"startLatitude": 45.0,
 		"startLongitude": -75.0,
-		"saleIds": ["far", "near", "middle"]
-	}`
+		"saleIds": [%q, %q, %q]
+	}`, farSale, nearSale, middleSale)
 
 	tests := []struct {
 		name           string
@@ -185,8 +194,8 @@ func TestItineraryController_getItinerary(t *testing.T) {
 		if len(response.Stops) != 3 {
 			t.Fatalf("len(stops) = %d, want 3", len(response.Stops))
 		}
-		if response.Stops[0].SaleId != "near" {
-			t.Errorf("first stop = %q, want %q", response.Stops[0].SaleId, "near")
+		if response.Stops[0].SaleId != nearSale {
+			t.Errorf("first stop = %q, want %q", response.Stops[0].SaleId, nearSale)
 		}
 		if response.Stops[0].Status != "planned" {
 			t.Errorf("first stop status = %q, want %q", response.Stops[0].Status, "planned")
@@ -326,12 +335,12 @@ func TestItineraryController_stopHandlers(t *testing.T) {
 		ownerId := uuid.NewString()
 		itineraryId := seedItinerary(t, service, ownerId)
 
-		if err := service.RemoveStop(test.CreateTestContext(t), itineraryId, ownerId, "far"); err != nil {
+		if err := service.RemoveStop(test.CreateTestContext(t), itineraryId, ownerId, farSale); err != nil {
 			t.Fatalf("RemoveStop() error = %v", err)
 		}
 
 		w := httptest.NewRecorder()
-		r := itineraryRequest(http.MethodPost, "/itinerary/stop", `{"saleId": "far"}`,
+		r := itineraryRequest(http.MethodPost, "/itinerary/stop", fmt.Sprintf(`{"saleId": %q}`, farSale),
 			map[string]string{"id": itineraryId})
 
 		controller.addStop(w, r, ownerId)
@@ -350,7 +359,7 @@ func TestItineraryController_stopHandlers(t *testing.T) {
 		itineraryId := seedItinerary(t, service, ownerId)
 
 		w := httptest.NewRecorder()
-		r := itineraryRequest(http.MethodPost, "/itinerary/stop", `{"saleId": "near"}`,
+		r := itineraryRequest(http.MethodPost, "/itinerary/stop", fmt.Sprintf(`{"saleId": %q}`, nearSale),
 			map[string]string{"id": itineraryId})
 
 		controller.addStop(w, r, ownerId)
@@ -367,7 +376,7 @@ func TestItineraryController_stopHandlers(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		r := itineraryRequest(http.MethodPatch, "/itinerary/stop", `{"status": "visited"}`,
-			map[string]string{"id": itineraryId, "saleId": "near"})
+			map[string]string{"id": itineraryId, "saleId": nearSale})
 
 		controller.updateStopStatus(w, r, ownerId)
 
@@ -387,7 +396,7 @@ func TestItineraryController_stopHandlers(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		r := itineraryRequest(http.MethodPatch, "/itinerary/stop", `{"status": "loitering"}`,
-			map[string]string{"id": itineraryId, "saleId": "near"})
+			map[string]string{"id": itineraryId, "saleId": nearSale})
 
 		controller.updateStopStatus(w, r, ownerId)
 
@@ -403,7 +412,7 @@ func TestItineraryController_stopHandlers(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		r := itineraryRequest(http.MethodDelete, "/itinerary/stop", "",
-			map[string]string{"id": itineraryId, "saleId": "near"})
+			map[string]string{"id": itineraryId, "saleId": nearSale})
 
 		controller.removeStop(w, r, ownerId)
 
@@ -418,7 +427,7 @@ func TestItineraryController_stopHandlers(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		r := itineraryRequest(http.MethodDelete, "/itinerary/stop", "",
-			map[string]string{"id": itineraryId, "saleId": "near"})
+			map[string]string{"id": itineraryId, "saleId": nearSale})
 
 		controller.removeStop(w, r, uuid.NewString())
 
@@ -445,7 +454,7 @@ func TestItineraryController_reorderStops(t *testing.T) {
 	}
 
 	response := decodeItinerary(t, w)
-	if want := []string{"far", "middle", "near"}; len(response.Stops) != 3 ||
+	if want := []string{farSale, middleSale, nearSale}; len(response.Stops) != 3 ||
 		response.Stops[0].SaleId != want[0] ||
 		response.Stops[1].SaleId != want[1] ||
 		response.Stops[2].SaleId != want[2] {

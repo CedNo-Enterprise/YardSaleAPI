@@ -15,6 +15,14 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	nearSale   = "aaaaaaaa-0000-4000-8000-000000000001"
+	middleSale = "aaaaaaaa-0000-4000-8000-000000000002"
+	farSale    = "aaaaaaaa-0000-4000-8000-000000000003"
+	extraSale  = "aaaaaaaa-0000-4000-8000-000000000004"
+	absentSale = "aaaaaaaa-0000-4000-8000-00000000dead"
+)
+
 func floatPtr(value float64) *float64 { return &value }
 
 func stringPtr(value string) *string { return &value }
@@ -51,9 +59,9 @@ func newItineraryFixture(t *testing.T) (
 	itineraryRepo := &memory.InMemoryItineraryRepository{}
 	saleRepo := &memory.InMemorySaleRepository{}
 
-	seedSale(t, saleRepo, "near", 45.1, -75.0)
-	seedSale(t, saleRepo, "middle", 45.2, -75.0)
-	seedSale(t, saleRepo, "far", 45.3, -75.0)
+	seedSale(t, saleRepo, nearSale, 45.1, -75.0)
+	seedSale(t, saleRepo, middleSale, 45.2, -75.0)
+	seedSale(t, saleRepo, farSale, 45.3, -75.0)
 
 	return NewItineraryService(itineraryRepo, saleRepo), itineraryRepo, saleRepo
 }
@@ -65,7 +73,7 @@ func validItineraryRequest() requests.ItineraryRequest {
 		Date:           time.Now(),
 		StartLatitude:  floatPtr(45.0),
 		StartLongitude: floatPtr(-75.0),
-		SaleIds:        []string{"far", "near", "middle"},
+		SaleIds:        []string{farSale, nearSale, middleSale},
 	}
 }
 
@@ -115,7 +123,7 @@ func Test_validateItinerary(t *testing.T) {
 		},
 		{
 			name:        "duplicate sale ids",
-			mutate:      func(r *requests.ItineraryRequest) { r.SaleIds = []string{"near", "near"} },
+			mutate:      func(r *requests.ItineraryRequest) { r.SaleIds = []string{nearSale, nearSale} },
 			wantErr:     true,
 			wantErrKind: apperror.KindInvalid,
 		},
@@ -212,11 +220,11 @@ func TestItineraryService_AddItinerary(t *testing.T) {
 			name:      "orders stops by proximity to the start",
 			mutate:    func(r *requests.ItineraryRequest) {},
 			wantErr:   false,
-			wantOrder: []string{"near", "middle", "far"},
+			wantOrder: []string{nearSale, middleSale, farSale},
 		},
 		{
 			name:        "unknown sale id",
-			mutate:      func(r *requests.ItineraryRequest) { r.SaleIds = []string{"near", "nonexistent"} },
+			mutate:      func(r *requests.ItineraryRequest) { r.SaleIds = []string{nearSale, absentSale} },
 			wantErr:     true,
 			wantErrKind: apperror.KindInvalid,
 		},
@@ -232,7 +240,7 @@ func TestItineraryService_AddItinerary(t *testing.T) {
 				r.StartLatitude, r.StartLongitude = nil, nil
 			},
 			wantErr:   false,
-			wantOrder: []string{"far", "near", "middle"},
+			wantOrder: []string{farSale, nearSale, middleSale},
 		},
 		{
 			name:        "invalid itinerary",
@@ -311,13 +319,13 @@ func TestItineraryService_rejectsNonOwners(t *testing.T) {
 			name: "add stop",
 			call: func() error {
 				_, err := service.AddStop(ctx, *itineraryId, intruderId,
-					requests.AddStopRequest{SaleId: "near"})
+					requests.AddStopRequest{SaleId: nearSale})
 				return err
 			},
 		},
 		{
 			name: "remove stop",
-			call: func() error { return service.RemoveStop(ctx, *itineraryId, intruderId, "near") },
+			call: func() error { return service.RemoveStop(ctx, *itineraryId, intruderId, nearSale) },
 		},
 		{
 			name: "reorder stops",
@@ -330,7 +338,7 @@ func TestItineraryService_rejectsNonOwners(t *testing.T) {
 		{
 			name: "set stop status",
 			call: func() error {
-				_, err := service.SetStopStatus(ctx, *itineraryId, intruderId, "near",
+				_, err := service.SetStopStatus(ctx, *itineraryId, intruderId, nearSale,
 					requests.UpdateStopStatusRequest{Status: "visited"})
 				return err
 			},
@@ -380,29 +388,29 @@ func TestItineraryService_AddStop(t *testing.T) {
 	userId := uuid.NewString()
 
 	itineraryDTO := validItineraryRequest()
-	itineraryDTO.SaleIds = []string{"near"}
+	itineraryDTO.SaleIds = []string{nearSale}
 	itineraryId, err := service.AddItinerary(ctx, userId, itineraryDTO)
 	if err != nil {
 		t.Fatalf("AddItinerary() error = %v", err)
 	}
 
-	seedSale(t, saleRepo, "extra", 45.4, -75.0)
+	seedSale(t, saleRepo, extraSale, 45.4, -75.0)
 
-	got, err := service.AddStop(ctx, *itineraryId, userId, requests.AddStopRequest{SaleId: "extra"})
+	got, err := service.AddStop(ctx, *itineraryId, userId, requests.AddStopRequest{SaleId: extraSale})
 	if err != nil {
 		t.Fatalf("AddStop() error = %v", err)
 	}
-	if want := []string{"near", "extra"}; !reflect.DeepEqual(itinerarySaleIds(got.Stops()), want) {
+	if want := []string{nearSale, extraSale}; !reflect.DeepEqual(itinerarySaleIds(got.Stops()), want) {
 		t.Errorf("stops = %v, want %v", itinerarySaleIds(got.Stops()), want)
 	}
 
-	_, err = service.AddStop(ctx, *itineraryId, userId, requests.AddStopRequest{SaleId: "near"})
+	_, err = service.AddStop(ctx, *itineraryId, userId, requests.AddStopRequest{SaleId: nearSale})
 	test.AssertKind(t, err, apperror.KindConflict)
 
-	_, err = service.AddStop(ctx, *itineraryId, userId, requests.AddStopRequest{SaleId: "nonexistent"})
+	_, err = service.AddStop(ctx, *itineraryId, userId, requests.AddStopRequest{SaleId: absentSale})
 	test.AssertKind(t, err, apperror.KindInvalid)
 
-	_, err = service.AddStop(ctx, uuid.NewString(), userId, requests.AddStopRequest{SaleId: "far"})
+	_, err = service.AddStop(ctx, uuid.NewString(), userId, requests.AddStopRequest{SaleId: farSale})
 	test.AssertKind(t, err, apperror.KindNotFound)
 }
 
@@ -416,7 +424,7 @@ func TestItineraryService_RemoveStop(t *testing.T) {
 		t.Fatalf("AddItinerary() error = %v", err)
 	}
 
-	if err = service.RemoveStop(ctx, *itineraryId, userId, "middle"); err != nil {
+	if err = service.RemoveStop(ctx, *itineraryId, userId, middleSale); err != nil {
 		t.Fatalf("RemoveStop() error = %v", err)
 	}
 
@@ -424,7 +432,7 @@ func TestItineraryService_RemoveStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetItineraryById() error = %v", err)
 	}
-	if want := []string{"near", "far"}; !reflect.DeepEqual(itinerarySaleIds(got.Stops()), want) {
+	if want := []string{nearSale, farSale}; !reflect.DeepEqual(itinerarySaleIds(got.Stops()), want) {
 		t.Errorf("stops = %v, want %v", itinerarySaleIds(got.Stops()), want)
 	}
 	for index, stop := range got.Stops() {
@@ -433,7 +441,7 @@ func TestItineraryService_RemoveStop(t *testing.T) {
 		}
 	}
 
-	test.AssertKind(t, service.RemoveStop(ctx, *itineraryId, userId, "middle"), apperror.KindNotFound)
+	test.AssertKind(t, service.RemoveStop(ctx, *itineraryId, userId, middleSale), apperror.KindNotFound)
 }
 
 func TestItineraryService_ReorderStops_preservesStopStatus(t *testing.T) {
@@ -448,7 +456,7 @@ func TestItineraryService_ReorderStops_preservesStopStatus(t *testing.T) {
 		t.Fatalf("AddItinerary() error = %v", err)
 	}
 
-	if _, err = service.SetStopStatus(ctx, *itineraryId, userId, "far",
+	if _, err = service.SetStopStatus(ctx, *itineraryId, userId, farSale,
 		requests.UpdateStopStatusRequest{Status: "visited"}); err != nil {
 		t.Fatalf("SetStopStatus() error = %v", err)
 	}
@@ -461,7 +469,7 @@ func TestItineraryService_ReorderStops_preservesStopStatus(t *testing.T) {
 		t.Fatalf("ReorderStops() error = %v", err)
 	}
 
-	if want := []string{"near", "middle", "far"}; !reflect.DeepEqual(itinerarySaleIds(reordered.Stops()), want) {
+	if want := []string{nearSale, middleSale, farSale}; !reflect.DeepEqual(itinerarySaleIds(reordered.Stops()), want) {
 		t.Errorf("stops = %v, want %v", itinerarySaleIds(reordered.Stops()), want)
 	}
 	if reordered.StartLatitude() != 45.0 || reordered.StartLongitude() != -75.0 {
@@ -474,7 +482,7 @@ func TestItineraryService_ReorderStops_preservesStopStatus(t *testing.T) {
 		t.Fatalf("GetItineraryById() error = %v", err)
 	}
 	for _, stop := range stored.Stops() {
-		if stop.SaleId() == "far" && stop.Status() != itinerary.StopStatusVisited {
+		if stop.SaleId() == farSale && stop.Status() != itinerary.StopStatusVisited {
 			t.Errorf("reorder lost stop status: got %v, want %v",
 				stop.Status(), itinerary.StopStatusVisited)
 		}
@@ -500,7 +508,7 @@ func TestItineraryService_ReorderStops_reusesStoredStart(t *testing.T) {
 		t.Errorf("start = (%v, %v), want the stored (45, -75)",
 			reordered.StartLatitude(), reordered.StartLongitude())
 	}
-	if want := []string{"near", "middle", "far"}; !reflect.DeepEqual(itinerarySaleIds(reordered.Stops()), want) {
+	if want := []string{nearSale, middleSale, farSale}; !reflect.DeepEqual(itinerarySaleIds(reordered.Stops()), want) {
 		t.Errorf("stops = %v, want %v", itinerarySaleIds(reordered.Stops()), want)
 	}
 }
@@ -515,7 +523,7 @@ func TestItineraryService_SetStopStatus(t *testing.T) {
 		t.Fatalf("AddItinerary() error = %v", err)
 	}
 
-	_, err = service.SetStopStatus(ctx, *itineraryId, userId, "near",
+	_, err = service.SetStopStatus(ctx, *itineraryId, userId, nearSale,
 		requests.UpdateStopStatusRequest{Status: "skipped"})
 	if err != nil {
 		t.Fatalf("SetStopStatus() error = %v", err)
@@ -529,11 +537,11 @@ func TestItineraryService_SetStopStatus(t *testing.T) {
 		t.Errorf("status = %v, want %v", stored.Stops()[0].Status(), itinerary.StopStatusSkipped)
 	}
 
-	_, err = service.SetStopStatus(ctx, *itineraryId, userId, "nonexistent",
+	_, err = service.SetStopStatus(ctx, *itineraryId, userId, absentSale,
 		requests.UpdateStopStatusRequest{Status: "visited"})
 	test.AssertKind(t, err, apperror.KindNotFound)
 
-	_, err = service.SetStopStatus(ctx, *itineraryId, userId, "near",
+	_, err = service.SetStopStatus(ctx, *itineraryId, userId, nearSale,
 		requests.UpdateStopStatusRequest{Status: "loitering"})
 	test.AssertKind(t, err, apperror.KindInvalid)
 }
@@ -590,4 +598,59 @@ func TestItineraryService_GetItinerariesByUserId(t *testing.T) {
 	if none == nil || len(none) != 0 {
 		t.Errorf("got %v, want an empty slice", none)
 	}
+}
+
+func TestItineraryService_malformedSaleIdIsInvalid(t *testing.T) {
+	service, _, _ := newItineraryFixture(t)
+	ctx := test.CreateTestContext(t)
+
+	itineraryDTO := validItineraryRequest()
+	itineraryDTO.SaleIds = []string{"not-a-uuid"}
+
+	_, err := service.AddItinerary(ctx, uuid.NewString(), itineraryDTO)
+
+	test.AssertKind(t, err, apperror.KindInvalid)
+}
+
+func TestItineraryService_wellFormedButAbsentSaleIdIsInvalid(t *testing.T) {
+	service, _, _ := newItineraryFixture(t)
+	ctx := test.CreateTestContext(t)
+
+	itineraryDTO := validItineraryRequest()
+	itineraryDTO.SaleIds = []string{nearSale, absentSale}
+
+	_, err := service.AddItinerary(ctx, uuid.NewString(), itineraryDTO)
+
+	test.AssertKind(t, err, apperror.KindInvalid)
+}
+
+func TestItineraryService_malformedItineraryIdIsNotFound(t *testing.T) {
+	service, _, _ := newItineraryFixture(t)
+	ctx := test.CreateTestContext(t)
+	userId := uuid.NewString()
+
+	itineraryId, err := service.AddItinerary(ctx, userId, validItineraryRequest())
+	if err != nil {
+		t.Fatalf("AddItinerary() error = %v", err)
+	}
+
+	_, err = service.GetItineraryById(ctx, "not-a-uuid")
+	test.AssertKind(t, err, apperror.KindNotFound)
+
+	_, err = service.UpdateItinerary(ctx, "not-a-uuid", userId,
+		requests.UpdateItineraryRequest{Name: stringPtr("x")})
+	test.AssertKind(t, err, apperror.KindNotFound)
+
+	test.AssertKind(t, service.DeleteItinerary(ctx, "not-a-uuid", userId), apperror.KindNotFound)
+
+	_, err = service.AddStop(ctx, "not-a-uuid", userId, requests.AddStopRequest{SaleId: nearSale})
+	test.AssertKind(t, err, apperror.KindNotFound)
+
+	_, err = service.ReorderStops(ctx, "not-a-uuid", userId, requests.ReorderStopsRequest{})
+	test.AssertKind(t, err, apperror.KindNotFound)
+
+	test.AssertKind(t, service.RemoveStop(ctx, "not-a-uuid", userId, nearSale), apperror.KindNotFound)
+
+	_, err = service.AddStop(ctx, *itineraryId, userId, requests.AddStopRequest{SaleId: "not-a-uuid"})
+	test.AssertKind(t, err, apperror.KindInvalid)
 }

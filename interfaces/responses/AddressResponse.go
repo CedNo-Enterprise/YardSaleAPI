@@ -16,9 +16,15 @@ type AddressResponse struct {
 }
 
 func NewAddressResponse(address address.Address) *AddressResponse {
+	// Line 2 is optional, so it is absent rather than empty on most addresses.
+	line2 := ""
+	if address.Line2() != nil {
+		line2 = *address.Line2()
+	}
+
 	return &AddressResponse{
 		Line1:      address.Line1(),
-		Line2:      *address.Line2(),
+		Line2:      line2,
 		City:       address.City(),
 		State:      address.State(),
 		PostalCode: address.PostalCode(),

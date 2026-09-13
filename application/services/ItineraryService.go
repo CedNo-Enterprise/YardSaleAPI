@@ -99,6 +99,10 @@ func validateStopStatus(statusDTO requests.UpdateStopStatusRequest) error {
 func (service *ItineraryService) requireOwnedItinerary(
 	ctx context.Context, itineraryId string, userId string,
 ) (*itinerary.Itinerary, error) {
+	if err := requireUuid(itineraryId, "itinerary not found"); err != nil {
+		return nil, err
+	}
+
 	i, err := service.itineraryRepository.GetById(ctx, itineraryId)
 	if err != nil {
 		return nil, err
@@ -208,6 +212,10 @@ func (service *ItineraryService) AddItinerary(
 func (service *ItineraryService) GetItineraryById(
 	ctx context.Context, itineraryId string,
 ) (*itinerary.Itinerary, error) {
+	if err := requireUuid(itineraryId, "itinerary not found"); err != nil {
+		return nil, err
+	}
+
 	i, err := service.itineraryRepository.GetById(ctx, itineraryId)
 	if err != nil {
 		slog.Error(err.Error())
@@ -326,7 +334,9 @@ func (service *ItineraryService) AddStop(
 		return nil, err
 	}
 
-	return i, nil
+	// The repository assigns the position under a lock, so report what was
+	// stored rather than the one guessed from a read that may now be stale.
+	return service.itineraryRepository.GetById(ctx, itineraryId)
 }
 
 func (service *ItineraryService) RemoveStop(

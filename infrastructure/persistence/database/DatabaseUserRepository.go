@@ -35,8 +35,13 @@ func (r *UserRepository) GetById(ctx context.Context, id string) (*user.User, er
 	db := r.db.WithContext(ctx)
 
 	var record records.UserRecord
+	// Only a missing row is a not-found. Reporting a connection failure as one
+	// would tell the caller the user does not exist when we simply cannot say.
 	if err := db.First(&record, "id = ?", id).Error; err != nil {
-		return nil, apperror.NotFound("user not found", nil)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperror.NotFound("user not found", err)
+		}
+		return nil, apperror.Internal(err)
 	}
 	return recordToUser(record), nil
 }
@@ -46,7 +51,10 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*user.Us
 
 	var record records.UserRecord
 	if err := db.First(&record, "email = ?", email).Error; err != nil {
-		return nil, apperror.NotFound("user not found", nil)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperror.NotFound("user not found", err)
+		}
+		return nil, apperror.Internal(err)
 	}
 	return recordToUser(record), nil
 }
